@@ -158,18 +158,10 @@ def main():
     with st.sidebar:
         st.markdown("## Configuration")
 
-        # API Key
-        st.markdown("### Mistral API Key")
-        api_key = st.text_input(
-            "Clé API Mistral",
-            type="password",
-            value=st.secrets.get("MISTRAL_API_KEY", ""),
-            placeholder="sk-...",
-            help="Gratuit sur console.mistral.ai — pas de carte bancaire requise"
-        )
+        # API Key (depuis les secrets Streamlit)
+        api_key = st.secrets.get("MISTRAL_API_KEY", "")
         if not api_key:
-            st.warning("Entrer une clé API Mistral pour commencer.")
-            st.markdown("[Obtenir une clé gratuite →](https://console.mistral.ai)")
+            st.error("L'application est en maintenance (Clé API non configurée par l'administrateur).")
             st.stop()
 
         st.markdown("### Modèle")
