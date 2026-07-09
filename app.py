@@ -1,6 +1,6 @@
 """
 RAG Document Intelligence — Dashboard Streamlit
-Stack : LangChain + Mistral AI + ChromaDB
+Stack : LangChain + Groq AI + ChromaDB + HuggingFace
 
 Features :
   - Upload multi-documents (PDF, DOCX, TXT)
@@ -149,7 +149,7 @@ def main():
         RAG Document Intelligence
     </h1>
     <p style='color:#888;margin-top:4px'>
-        Analyse, interroge et compare tes documents — LangChain · Mistral AI · ChromaDB
+        Analyse, interroge et compare tes documents — LangChain · Groq AI · ChromaDB
     </p>
     """, unsafe_allow_html=True)
     st.divider()
@@ -159,16 +159,16 @@ def main():
         st.markdown("## Configuration")
 
         # API Key (depuis les secrets Streamlit)
-        api_key = st.secrets.get("MISTRAL_API_KEY", "")
+        api_key = st.secrets.get("GROQ_API_KEY", "")
         if not api_key:
-            st.error("L'application est en maintenance (Clé API non configurée par l'administrateur).")
+            st.error("L'application est en maintenance (Clé API Groq non configurée par l'administrateur).")
             st.stop()
 
         st.markdown("### Modèle")
         model = st.selectbox(
-            "Modèle Mistral",
-            ["mistral-small-latest", "mistral-medium-latest", "open-mistral-7b"],
-            help="mistral-small = rapide et gratuit"
+            "Modèle Groq",
+            ["llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"],
+            help="Modèles open-source ultra-rapides hébergés sur Groq"
         )
 
         st.markdown("### Chunking")
@@ -233,7 +233,7 @@ def main():
         st.markdown("""
         ---
         **Stack :**
-        LangChain · Mistral AI · ChromaDB · Streamlit
+        LangChain · Groq AI · HuggingFace · ChromaDB · Streamlit
 
         **Auteur :**
         [Oumou Kaltoum Sall](https://github.com/KalsoumDS)

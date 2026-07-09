@@ -1,11 +1,11 @@
 """
 RAG Pipeline — Document Intelligence
-Stack : LangChain + Mistral AI + ChromaDB
+Stack : LangChain + Groq AI + ChromaDB + HuggingFace
 
 Architecture :
-  Document(s) → Chunking → Embeddings (Mistral) → ChromaDB
+  Document(s) → Chunking → Embeddings (HuggingFace) → ChromaDB
                                                         ↓
-  Question → Embedding → Retrieval (top-k chunks) → LLM (Mistral) → Réponse
+  Question → Embedding → Retrieval (top-k chunks) → LLM (Groq) → Réponse
 """
 from __future__ import annotations
 
@@ -16,7 +16,8 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
-from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_groq import ChatGroq
 from langchain_chroma import Chroma
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
@@ -59,9 +60,9 @@ class RAGPipeline:
     Pipeline RAG complet :
     - Ingestion de documents (PDF, DOCX, TXT)
     - Chunking intelligent avec RecursiveTextSplitter
-    - Embeddings via Mistral AI
+    - Embeddings via HuggingFace (all-MiniLM-L6-v2)
     - Stockage vectoriel ChromaDB (persistant)
-    - Retrieval + génération avec Mistral
+    - Retrieval + génération avec Groq
     """
 
     def __init__(
@@ -70,12 +71,12 @@ class RAGPipeline:
         persist_dir: str = "./chroma_db",
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        model_name: str = "mistral-small-latest",
-        embedding_model: str = "mistral-embed",
+        model_name: str = "llama3-8b-8192",
+        embedding_model: str = "all-MiniLM-L6-v2",
         top_k: int = 4,
         temperature: float = 0.1,
     ):
-        os.environ["MISTRAL_API_KEY"] = api_key
+        os.environ["GROQ_API_KEY"] = api_key
         self.api_key = api_key
         self.persist_dir = persist_dir
         self.chunk_size = chunk_size
@@ -83,17 +84,16 @@ class RAGPipeline:
         self.model_name = model_name
         self.top_k = top_k
 
-        # Embeddings Mistral
-        self.embeddings = MistralAIEmbeddings(
-            model=embedding_model,
-            mistral_api_key=api_key
+        # Embeddings HuggingFace (local/free)
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name=embedding_model
         )
 
-        # LLM Mistral
-        self.llm = ChatMistralAI(
-            model=model_name,
+        # LLM Groq
+        self.llm = ChatGroq(
+            model_name=model_name,
             temperature=temperature,
-            mistral_api_key=api_key,
+            groq_api_key=api_key,
             max_tokens=2048,
         )
 
