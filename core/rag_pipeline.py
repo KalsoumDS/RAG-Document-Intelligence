@@ -19,7 +19,7 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, Te
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain_chroma import Chroma
-from langchain.chains import RetrievalQA
+
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 
