@@ -164,6 +164,7 @@ def main():
         api_key = st.text_input(
             "Clé API Mistral",
             type="password",
+            value=st.secrets.get("MISTRAL_API_KEY", ""),
             placeholder="sk-...",
             help="Gratuit sur console.mistral.ai — pas de carte bancaire requise"
         )
