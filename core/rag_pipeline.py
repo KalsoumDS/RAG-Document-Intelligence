@@ -71,7 +71,7 @@ class RAGPipeline:
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         model_name: str = "llama-3.1-8b-instant",
-        embedding_model: str = "all-MiniLM-L6-v2",
+        embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
         top_k: int = 4,
         temperature: float = 0.1,
     ):
@@ -186,8 +186,8 @@ class RAGPipeline:
             raise ValueError("Aucun document ingéré. Charger des documents d'abord.")
 
         retriever = self.vectorstore.as_retriever(
-            search_type="mmr",  # Maximum Marginal Relevance → diversité des résultats
-            search_kwargs={"k": self.top_k, "fetch_k": self.top_k * 2}
+            search_type="similarity",
+            search_kwargs={"k": self.top_k}
         )
 
         # Récupérer les chunks pertinents
