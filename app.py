@@ -167,7 +167,7 @@ def main():
         st.markdown("### Modèle")
         model = st.selectbox(
             "Modèle Groq",
-            ["llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"],
+            ["llama-3.1-8b-instant", "llama3-70b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"],
             help="Modèles open-source ultra-rapides hébergés sur Groq"
         )
 

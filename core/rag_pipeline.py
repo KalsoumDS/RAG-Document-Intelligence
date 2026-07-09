@@ -70,7 +70,7 @@ class RAGPipeline:
         persist_dir: str = "./chroma_db",
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        model_name: str = "llama3-8b-8192",
+        model_name: str = "llama-3.1-8b-instant",
         embedding_model: str = "all-MiniLM-L6-v2",
         top_k: int = 4,
         temperature: float = 0.1,
