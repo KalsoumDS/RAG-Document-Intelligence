@@ -24,7 +24,6 @@ from datetime import datetime
 # ── CONFIG ───────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="RAG Document Intelligence",
-    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -92,7 +91,7 @@ def format_sources(sources: list) -> str:
     for s in sources:
         html += f"""
         <div class="source-card">
-            📄 <b>{s['source']}</b> — chunk #{s['chunk_id']}<br/>
+            <b>{s['source']}</b> — chunk #{s['chunk_id']}<br/>
             <span style="color:#888;font-size:0.8rem">{s['content']}</span>
         </div>"""
     return html
@@ -147,7 +146,7 @@ def main():
     # Header
     st.markdown("""
     <h1 style='font-size:2rem;font-weight:900;margin-bottom:0'>
-        🧠 RAG Document Intelligence
+        RAG Document Intelligence
     </h1>
     <p style='color:#888;margin-top:4px'>
         Analyse, interroge et compare tes documents — LangChain · Mistral AI · ChromaDB
@@ -157,10 +156,10 @@ def main():
 
     # ── SIDEBAR ───────────────────────────────────────────────────────────────
     with st.sidebar:
-        st.markdown("## ⚙️ Configuration")
+        st.markdown("## Configuration")
 
         # API Key
-        st.markdown("### 🔑 Mistral API Key")
+        st.markdown("### Mistral API Key")
         api_key = st.text_input(
             "Clé API Mistral",
             type="password",
@@ -169,28 +168,28 @@ def main():
             help="Gratuit sur console.mistral.ai — pas de carte bancaire requise"
         )
         if not api_key:
-            st.warning("⚠️ Entrer une clé API Mistral pour commencer.")
+            st.warning("Entrer une clé API Mistral pour commencer.")
             st.markdown("[Obtenir une clé gratuite →](https://console.mistral.ai)")
             st.stop()
 
-        st.markdown("### 🤖 Modèle")
+        st.markdown("### Modèle")
         model = st.selectbox(
             "Modèle Mistral",
             ["mistral-small-latest", "mistral-medium-latest", "open-mistral-7b"],
             help="mistral-small = rapide et gratuit"
         )
 
-        st.markdown("### 📄 Chunking")
+        st.markdown("### Chunking")
         chunk_size = st.slider("Taille des chunks (chars)", 500, 2000, 1000, 100)
         chunk_overlap = st.slider("Chevauchement", 50, 400, 200, 50)
 
-        st.markdown("### 🔍 Retrieval")
+        st.markdown("### Retrieval")
         top_k = st.slider("Chunks récupérés (top-k)", 2, 8, 4)
 
         st.divider()
 
         # Upload documents
-        st.markdown("### 📂 Documents")
+        st.markdown("### Documents")
         uploaded_files = st.file_uploader(
             "Charger des documents",
             type=['pdf', 'docx', 'txt'],
@@ -202,7 +201,7 @@ def main():
             pipeline = get_pipeline(api_key, chunk_size, chunk_overlap, model, top_k)
             for uf in uploaded_files:
                 if uf.name not in [d['filename'] for d in st.session_state.ingested_files]:
-                    with st.spinner(f"📥 Ingestion de {uf.name}..."):
+                    with st.spinner(f"Ingestion de {uf.name}..."):
                         try:
                             # Sauvegarder temporairement
                             with tempfile.NamedTemporaryFile(
@@ -217,20 +216,20 @@ def main():
 
                             st.session_state.ingested_files.append(stats)
                             st.session_state.pipeline = pipeline
-                            st.success(f"✅ {uf.name} — {stats['n_chunks']} chunks")
+                            st.success(f"{uf.name} — {stats['n_chunks']} chunks")
                         except Exception as e:
-                            st.error(f"❌ {uf.name} : {e}")
+                            st.error(f"{uf.name} : {e}")
 
         # Liste des fichiers ingérés
         if st.session_state.ingested_files:
             st.markdown(f"**{len(st.session_state.ingested_files)} document(s) chargé(s)**")
             for d in st.session_state.ingested_files:
-                st.markdown(f"- 📄 `{d['filename']}` ({d['n_chunks']} chunks)")
+                st.markdown(f"- `{d['filename']}` ({d['n_chunks']} chunks)")
 
         st.divider()
 
         # Reset
-        if st.button("🗑️ Vider la base vectorielle", use_container_width=True):
+        if st.button("Vider la base vectorielle", use_container_width=True):
             if st.session_state.pipeline:
                 st.session_state.pipeline.reset()
             st.session_state.ingested_files = []
@@ -250,27 +249,27 @@ def main():
 
     # ── VÉRIFICATION PIPELINE ─────────────────────────────────────────────────
     if not st.session_state.ingested_files:
-        st.info("👈 Charger au moins un document dans la barre latérale pour commencer.")
+        st.info("Charger au moins un document dans la barre latérale pour commencer.")
 
         # Demo visuelle
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown("""
-            **📄 1. Upload**
+            **1. Upload**
             
             Charge tes documents PDF, DOCX ou TXT. 
             Le pipeline les découpe en chunks intelligents.
             """)
         with col2:
             st.markdown("""
-            **🔍 2. Analyse**
+            **2. Analyse**
             
             Résumé automatique, extraction des points clés, 
             détection de la langue et du domaine.
             """)
         with col3:
             st.markdown("""
-            **💬 3. Q&A**
+            **3. Q&A**
             
             Pose des questions en langage naturel. 
             Les sources sont citées avec leurs passages exacts.
@@ -283,23 +282,23 @@ def main():
 
     # ── ONGLETS ───────────────────────────────────────────────────────────────
     tab1, tab2, tab3, tab4 = st.tabs([
-        "💬 Q&A Chat", "📋 Résumés", "⚖️ Comparaison", "📊 Métriques"
+        "Q&A Chat", "Résumés", "Comparaison", "Métriques"
     ])
 
     # ── TAB 1 : Q&A CHAT ──────────────────────────────────────────────────────
     with tab1:
-        st.markdown("#### 💬 Questions & Réponses")
+        st.markdown("#### Questions & Réponses")
         st.caption(f"Base vectorielle : **{pipeline.total_chunks} chunks** de **{pipeline.n_documents} document(s)**")
 
         # Afficher l'historique
         for msg in st.session_state.chat_history:
-            with st.chat_message(msg['role'], avatar='🧠' if msg['role'] == 'assistant' else '👤'):
+            with st.chat_message(msg['role']):
                 st.markdown(msg['content'], unsafe_allow_html=True)
                 if msg.get('sources'):
-                    with st.expander(f"📎 {len(msg['sources'])} source(s) utilisée(s)"):
+                    with st.expander(f"{len(msg['sources'])} source(s) utilisée(s)"):
                         st.markdown(format_sources(msg['sources']), unsafe_allow_html=True)
                 if msg.get('latency'):
-                    st.caption(f"⏱️ {msg['latency']:.2f}s · {msg.get('model', model)}")
+                    st.caption(f"{msg['latency']:.2f}s · {msg.get('model', model)}")
 
         # Input
         if question := st.chat_input("Pose une question sur tes documents..."):
@@ -308,12 +307,12 @@ def main():
                 'role': 'user', 'content': question,
                 'timestamp': datetime.now().isoformat()
             })
-            with st.chat_message('user', avatar='👤'):
+            with st.chat_message('user'):
                 st.markdown(question)
 
             # Générer la réponse
-            with st.chat_message('assistant', avatar='🧠'):
-                with st.spinner("🔍 Recherche dans les documents..."):
+            with st.chat_message('assistant'):
+                with st.spinner("Recherche dans les documents..."):
                     t0 = time.time()
                     try:
                         result = pipeline.query(question)
@@ -323,9 +322,9 @@ def main():
 
                         st.markdown(result['answer'])
                         if result.get('sources'):
-                            with st.expander(f"📎 {result['n_sources']} source(s) utilisée(s)"):
+                            with st.expander(f"{result['n_sources']} source(s) utilisée(s)"):
                                 st.markdown(format_sources(result['sources']), unsafe_allow_html=True)
-                        st.caption(f"⏱️ {latency:.2f}s · {model} · {result['n_sources']} chunks utilisés")
+                        st.caption(f"{latency:.2f}s · {model} · {result['n_sources']} chunks utilisés")
 
                         st.session_state.chat_history.append({
                             'role': 'assistant',
@@ -336,11 +335,11 @@ def main():
                             'timestamp': datetime.now().isoformat()
                         })
                     except Exception as e:
-                        st.error(f"❌ Erreur : {e}")
+                        st.error(f"Erreur : {e}")
 
         # Questions suggérées
         if not st.session_state.chat_history:
-            st.markdown("**💡 Questions suggérées :**")
+            st.markdown("**Questions suggérées :**")
             suggestions = [
                 "Quel est le sujet principal de ce document ?",
                 "Quelles sont les conclusions ou recommandations ?",
@@ -358,13 +357,13 @@ def main():
 
     # ── TAB 2 : RÉSUMÉS ───────────────────────────────────────────────────────
     with tab2:
-        st.markdown("#### 📋 Résumés automatiques")
+        st.markdown("#### Résumés automatiques")
 
         for doc_info in st.session_state.ingested_files:
             fname = doc_info['filename']
             col_h, col_btn = st.columns([4, 1])
             with col_h:
-                st.markdown(f"**📄 {fname}**")
+                st.markdown(f"**{fname}**")
             with col_btn:
                 gen_btn = st.button(
                     "Générer" if fname not in st.session_state.summaries else "Regénérer",
@@ -372,7 +371,7 @@ def main():
                 )
 
             if gen_btn:
-                with st.spinner(f"📊 Analyse de {fname}..."):
+                with st.spinner(f"Analyse de {fname}..."):
                     try:
                         # Récupérer le texte depuis le vectorstore
                         docs = pipeline.vectorstore.similarity_search(
@@ -383,11 +382,11 @@ def main():
                         summary = pipeline.summarize(text=text)
                         st.session_state.summaries[fname] = summary
                     except Exception as e:
-                        st.error(f"❌ {e}")
+                        st.error(f"{e}")
 
             if fname in st.session_state.summaries:
                 s = st.session_state.summaries[fname]
-                with st.expander(f"📊 Résumé — {s.get('title', fname)}", expanded=True):
+                with st.expander(f"Résumé — {s.get('title', fname)}", expanded=True):
                     col_a, col_b = st.columns([2, 1])
                     with col_a:
                         st.markdown(f"**Résumé :**\n\n{s.get('summary', '')}")
@@ -400,15 +399,15 @@ def main():
                         <div class='tag tag-blue'>{s.get('domain', '?')}</div><br/>
                         <div class='tag tag-green'>{s.get('language', '?')}</div>
                         <div class='tag tag-purple'>{s.get('complexity', '?')}</div><br/><br/>
-                        📝 <b>{s.get('n_words', '?')} mots</b><br/>
-                        📄 <b>{doc_info['n_chunks']} chunks</b>
+                        <b>{s.get('n_words', '?')} mots</b><br/>
+                        <b>{doc_info['n_chunks']} chunks</b>
                         </div>
                         """, unsafe_allow_html=True)
             st.divider()
 
     # ── TAB 3 : COMPARAISON ───────────────────────────────────────────────────
     with tab3:
-        st.markdown("#### ⚖️ Comparaison de documents")
+        st.markdown("#### Comparaison de documents")
         if len(st.session_state.ingested_files) < 2:
             st.info("Charger au moins 2 documents pour utiliser la comparaison.")
         else:
@@ -417,7 +416,7 @@ def main():
                 placeholder="Ex: Quelles sont les conclusions sur les performances ?",
                 help="Les réponses seront générées séparément pour chaque document."
             )
-            if st.button("⚖️ Comparer", type="primary") and compare_q:
+            if st.button("Comparer", type="primary") and compare_q:
                 with st.spinner("Comparaison en cours..."):
                     try:
                         results = pipeline.compare_documents(compare_q)
@@ -426,26 +425,26 @@ def main():
                         cols = st.columns(len(results))
                         for col, (fname, answer) in zip(cols, results.items()):
                             with col:
-                                st.markdown(f"**📄 {fname}**")
+                                st.markdown(f"**{fname}**")
                                 st.markdown(answer)
                     except Exception as e:
-                        st.error(f"❌ {e}")
+                        st.error(f"{e}")
 
     # ── TAB 4 : MÉTRIQUES ─────────────────────────────────────────────────────
     with tab4:
-        st.markdown("#### 📊 Métriques & Analyse")
+        st.markdown("#### Métriques & Analyse")
 
         # KPIs
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("📄 Documents", pipeline.n_documents)
+            st.metric("Documents", pipeline.n_documents)
         with col2:
-            st.metric("🧩 Chunks total", pipeline.total_chunks)
+            st.metric("Chunks total", pipeline.total_chunks)
         with col3:
-            st.metric("💬 Requêtes", st.session_state.total_queries)
+            st.metric("Requêtes", st.session_state.total_queries)
         with col4:
             avg_lat = (st.session_state.total_latency / max(st.session_state.total_queries, 1))
-            st.metric("⏱️ Latence moy.", f"{avg_lat:.2f}s")
+            st.metric("Latence moy.", f"{avg_lat:.2f}s")
 
         st.divider()
 
@@ -464,17 +463,17 @@ def main():
 
         # Détails des documents
         if st.session_state.ingested_files:
-            st.markdown("#### 📋 Détails des documents")
+            st.markdown("#### Détails des documents")
             df = pd.DataFrame(st.session_state.ingested_files)
             df.columns = ['Fichier', 'Pages', 'Chunks', 'Chunk moy. (chars)', 'Total chars']
             st.dataframe(df, use_container_width=True)
 
         # Export de l'historique
         if st.session_state.chat_history:
-            st.markdown("#### 💾 Export")
+            st.markdown("#### Export")
             history_json = json.dumps(st.session_state.chat_history, ensure_ascii=False, indent=2)
             st.download_button(
-                "⬇️ Télécharger l'historique (JSON)",
+                "Télécharger l'historique (JSON)",
                 history_json,
                 file_name=f"rag_history_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                 mime="application/json"

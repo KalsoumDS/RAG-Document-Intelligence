@@ -1,4 +1,4 @@
-# 🧠 RAG Document Intelligence
+# RAG Document Intelligence
 
 > Pipeline RAG complet pour l'analyse intelligente de documents techniques — LangChain · Mistral AI · ChromaDB · Streamlit
 
@@ -7,17 +7,17 @@
 ![Mistral](https://img.shields.io/badge/Mistral_AI-API-orange)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.35+-red)
 
-## 🎯 Objectif
+## Objectif
 
 Système de Retrieval-Augmented Generation (RAG) permettant d'interroger des documents techniques en langage naturel, avec citation des sources et résumé automatique structuré.
 
-**Cas d'usage :**
+Cas d'usage :
 - Analyser des rapports techniques volumineux
 - Extraire des insights de publications scientifiques
 - Comparer plusieurs documents sur une même question
 - Générer des résumés exécutifs automatiques
 
-## 🏗️ Architecture RAG
+## Architecture RAG
 
 ```
 Documents (PDF/DOCX/TXT)
@@ -40,38 +40,38 @@ Question utilisateur
   Réponse + Sources citées
 ```
 
-## ✨ Features
+## Fonctionnalités
 
-| Feature | Description |
+| Fonctionnalité | Description |
 |---------|-------------|
-| **Multi-documents** | Upload simultané de plusieurs PDF/DOCX/TXT |
-| **Q&A sourcé** | Réponses avec citation des passages exacts |
-| **Résumé structuré** | Titre, résumé, points clés, domaine, complexité |
-| **Comparaison** | Même question sur plusieurs documents en parallèle |
-| **MMR Retrieval** | Diversité maximale des chunks récupérés |
-| **Historique** | Conversation persistante + export JSON |
-| **Métriques** | Distribution des chunks, latence, stats |
+| Multi-documents | Upload simultané de plusieurs PDF/DOCX/TXT |
+| Q&A sourcé | Réponses avec citation des passages exacts |
+| Résumé structuré | Titre, résumé, points clés, domaine, complexité |
+| Comparaison | Même question sur plusieurs documents en parallèle |
+| MMR Retrieval | Diversité maximale des chunks récupérés |
+| Historique | Conversation persistante + export JSON |
+| Métriques | Distribution des chunks, latence, stats |
 
-## 🚀 Installation
+## Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 🔑 Obtenir une clé Mistral (gratuit)
+## Obtenir une clé Mistral (gratuit)
 
 1. Aller sur [console.mistral.ai](https://console.mistral.ai)
 2. Créer un compte (pas de carte bancaire)
 3. Générer une clé API dans "API Keys"
 4. Coller la clé dans la sidebar du dashboard
 
-## 🏃 Lancement
+## Lancement
 
 ```bash
 streamlit run app.py
 ```
 
-## 📁 Structure
+## Structure du projet
 
 ```
 rag-document-intelligence/
@@ -84,15 +84,15 @@ rag-document-intelligence/
 └── README.md
 ```
 
-## 🛠️ Stack technique
+## Stack technique
 
-- **LangChain** — Orchestration du pipeline RAG
-- **Mistral AI** — Embeddings (`mistral-embed`) + LLM (`mistral-small`)
-- **ChromaDB** — Base vectorielle persistante
-- **MMR (Maximum Marginal Relevance)** — Retrieval avec diversité
-- **Streamlit** — Dashboard interactif
+- LangChain — Orchestration du pipeline RAG
+- Mistral AI — Embeddings (mistral-embed) + LLM (mistral-small)
+- ChromaDB — Base vectorielle persistante
+- MMR (Maximum Marginal Relevance) — Retrieval avec diversité
+- Streamlit — Dashboard interactif
 
-## 👩‍💻 Auteur
+## Auteur
 
-**Oumou Kaltoum Sall** — Data Scientist & ML Engineer  
+Oumou Kaltoum Sall — Data Scientist & ML Engineer  
 [GitHub](https://github.com/KalsoumDS) · [Email](mailto:s.sall@mundiapolis.ma)
