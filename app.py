@@ -31,17 +31,130 @@ st.set_page_config(
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+/* Main container */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+/* Header styling */
+h1 {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+h2 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+h3 {
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+}
+
+/* Metric styling */
+[data-testid="stMetricValue"] {
+    font-size: 1.75rem !important;
+    font-weight: 800 !important;
+}
+
+[data-testid="stMetricDelta"] {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+}
+
+/* Section header */
+.section-header {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    color: #6b7280 !important;
+    margin: 2rem 0 0.75rem 0 !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 2px solid #e5e7eb !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .section-header {
+        color: #9ca3af !important;
+        border-bottom-color: #374151 !important;
+    }
+}
+
+/* Info box */
+.info-box {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #1f2937;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.info-box h3, .info-box h4 {
+    color: #1f2937;
+}
+
+.info-box p, .info-box li {
+    color: inherit;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+    .info-box {
+        background-color: #1e293b;
+        border-color: #334151;
+        color: #f8fafc;
+    }
+
+    .info-box h3, .info-box h4 {
+        color: #e0e7ff;
+    }
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+    color: #f8fafc;
+}
+
+[data-testid="stSidebar"] h2 {
+    color: #e0e7ff !important;
+}
+
+[data-testid="stSidebar"] h3 {
+    color: #c7d2fe !important;
+}
+
+/* Chat message */
 [data-testid="stChatMessage"] { border-radius: 12px; margin-bottom: 8px; }
+
+/* Source card */
 .source-card {
     background: rgba(124,106,247,.08);
     border: 1px solid rgba(124,106,247,.25);
     border-radius: 8px; padding: 12px 16px; margin: 6px 0;
     font-size: 0.85rem;
 }
+
+/* Metric card */
 .metric-card {
     background: #111; border: 1px solid #222;
     border-radius: 10px; padding: 20px; text-align: center;
 }
+
+/* Tags */
 .tag {
     display: inline-block; padding: 3px 10px;
     border-radius: 20px; font-size: 0.75rem; font-weight: 600;
@@ -50,6 +163,50 @@ st.markdown("""
 .tag-green  { background: rgba(0,200,100,.15); color: #00c864; border: 1px solid rgba(0,200,100,.3); }
 .tag-blue   { background: rgba(69,183,209,.15); color: #45b7d1; border: 1px solid rgba(69,183,209,.3); }
 .tag-purple { background: rgba(124,106,247,.15); color: #a78bfa; border: 1px solid rgba(124,106,247,.3); }
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    padding: 0 1.5rem;
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+}
+
+/* Buttons */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* DataFrames */
+[data-testid="stDataFrame"] {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Divider */
+hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+    margin: 2rem 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,13 +302,9 @@ def plot_chat_activity(history: list):
 def main():
     # Header
     st.markdown("""
-    <h1 style='font-size:2rem;font-weight:900;margin-bottom:0'>
-        RAG Document Intelligence
-    </h1>
-    <p style='color:#888;margin-top:4px'>
-        Analyse, interroge et compare tes documents — LangChain · Groq AI · ChromaDB
-    </p>
-    """, unsafe_allow_html=True)
+    # RAG Document Intelligence
+    ## Analyse, interroge et compare tes documents — LangChain · Groq AI · ChromaDB
+    """)
     st.divider()
 
     # ── SIDEBAR ───────────────────────────────────────────────────────────────
@@ -279,7 +432,7 @@ def main():
 
     # ── TAB 1 : Q&A CHAT ──────────────────────────────────────────────────────
     with tab1:
-        st.markdown("#### Questions & Réponses")
+        st.markdown('<div class="section-header">Questions & Réponses</div>', unsafe_allow_html=True)
         st.caption(f"Base vectorielle : **{pipeline.total_chunks} chunks** de **{pipeline.n_documents} document(s)**")
 
         # Afficher l'historique
@@ -349,7 +502,7 @@ def main():
 
     # ── TAB 2 : RÉSUMÉS ───────────────────────────────────────────────────────
     with tab2:
-        st.markdown("#### Résumés automatiques")
+        st.markdown('<div class="section-header">Résumés automatiques</div>', unsafe_allow_html=True)
 
         for doc_info in st.session_state.ingested_files:
             fname = doc_info['filename']
@@ -399,7 +552,7 @@ def main():
 
     # ── TAB 3 : COMPARAISON ───────────────────────────────────────────────────
     with tab3:
-        st.markdown("#### Comparaison de documents")
+        st.markdown('<div class="section-header">Comparaison de documents</div>', unsafe_allow_html=True)
         if len(st.session_state.ingested_files) < 2:
             st.info("Charger au moins 2 documents pour utiliser la comparaison.")
         else:
@@ -424,7 +577,7 @@ def main():
 
     # ── TAB 4 : MÉTRIQUES ─────────────────────────────────────────────────────
     with tab4:
-        st.markdown("#### Métriques & Analyse")
+        st.markdown('<div class="section-header">Métriques & Analyse</div>', unsafe_allow_html=True)
 
         # KPIs
         col1, col2, col3, col4 = st.columns(4)
