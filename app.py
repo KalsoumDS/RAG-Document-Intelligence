@@ -311,11 +311,21 @@ def main():
     with st.sidebar:
         st.markdown("## Configuration")
 
-        # API Key (depuis les secrets Streamlit)
-        api_key = st.secrets.get("GROQ_API_KEY", "")
+        # API Key (depuis les secrets Streamlit ou entrée manuelle)
+        try:
+            api_key = st.secrets.get("GROQ_API_KEY", "")
+        except Exception:
+            api_key = ""
+        
         if not api_key:
-            st.error("L'application est en maintenance (Clé API Groq non configurée par l'administrateur).")
-            st.stop()
+            api_key = st.text_input(
+                "Clé API Groq",
+                type="password",
+                help="Entrez votre clé API Groq (disponible sur https://console.groq.com)"
+            )
+            if not api_key:
+                st.info("Entrez votre clé API Groq pour commencer.")
+                return
 
         st.markdown("### Modèle")
         model = st.selectbox(
