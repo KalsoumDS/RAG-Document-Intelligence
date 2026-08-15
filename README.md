@@ -1,98 +1,85 @@
-# RAG Document Intelligence
+# 📄 Intelligence Documentaire RAG & Analyse de Politiques / ESG
 
-> Pipeline RAG complet pour l'analyse intelligente de documents techniques — LangChain · Mistral AI · ChromaDB · Streamlit
+> Démocratisation de l'accès aux réglementations, au droit du travail et aux rapports d'impact (ESG, Climat) via RAG Multimodal — LangChain · Mistral AI · ChromaDB · Streamlit
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![LangChain](https://img.shields.io/badge/LangChain-0.2+-green)
 ![Mistral](https://img.shields.io/badge/Mistral_AI-API-orange)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.35+-red)
 
-## Objectif
+---
 
-Système de Retrieval-Augmented Generation (RAG) permettant d'interroger des documents techniques en langage naturel, avec citation des sources et résumé automatique structuré.
+## 🎯 Problématique Métier & Impact Sociétal
 
-Cas d'usage :
-- Analyser des rapports techniques volumineux
-- Extraire des insights de publications scientifiques
-- Comparer plusieurs documents sur une même question
-- Générer des résumés exécutifs automatiques
+Les ONG, citoyens et PME se perdent dans des milliers de pages de textes juridiques, rapports d'impact environnemental (RSE/ESG) ou réglementations administratives complexes.
 
-## Architecture RAG
+### 💡 Solution & Valeur Ajoutée
+Cette plateforme d'**Intelligence Documentaire RAG** permet d'interroger des corpus volumineux en langage naturel, en garantissant des **réponses 100% sourcées** avec citation exacte des pages et paragraphes d'origine.
+- **Transparence & Zéro Hallucination** : Filtrage strict par Maximum Marginal Relevance (MMR) et citation des sources.
+- **Accès Simplifié aux Textes de Loi & ESG** : Synthèse automatique des points clés et extraction d'insights complexes en quelques secondes.
+
+---
+
+## 🏗️ Architecture RAG
 
 ```
-Documents (PDF/DOCX/TXT)
-        ↓
-  RecursiveTextSplitter
-  (chunks de 1000 chars, overlap 200)
-        ↓
-  Mistral Embeddings (mistral-embed)
-        ↓
-  ChromaDB (vectorstore persistant)
-        ↓
-Question utilisateur
-        ↓
-  MMR Retrieval (Maximum Marginal Relevance)
-  top-k chunks les plus pertinents et diversifiés
-        ↓
-  Mistral LLM (mistral-small-latest)
-  + Prompt engineering (réponse sourcée)
-        ↓
-  Réponse + Sources citées
+Documents complexes (PDF, DOCX, TXT - Textes de Loi / Rapports RSE)
+                            ↓
+                 RecursiveTextSplitter
+               (chunks 1000 chars, overlap 200)
+                            ↓
+               Mistral Embeddings (mistral-embed)
+                            ↓
+               ChromaDB (Vectorstore persistant)
+                            ↓
+                    Question Utilisateur
+                            ↓
+       MMR Retrieval (Maximum Marginal Relevance - Top-K)
+                            ↓
+         Mistral LLM (mistral-small) + Prompt Engineering
+                            ↓
+                Réponse Structurée & Sourcée
 ```
 
-## Fonctionnalités
+---
 
-| Fonctionnalité | Description |
-|---------|-------------|
-| Multi-documents | Upload simultané de plusieurs PDF/DOCX/TXT |
-| Q&A sourcé | Réponses avec citation des passages exacts |
-| Résumé structuré | Titre, résumé, points clés, domaine, complexité |
-| Comparaison | Même question sur plusieurs documents en parallèle |
-| MMR Retrieval | Diversité maximale des chunks récupérés |
-| Historique | Conversation persistante + export JSON |
-| Métriques | Distribution des chunks, latence, stats |
+## 🚀 Fonctionnalités Clés
 
-## Installation
+- 📁 **Multi-Documents** : Ingestion simultanée de plusieurs rapports et textes réglementaires.
+- 🎯 **Q&A 100% Sourcé** : Réponses précises accompagnées de la citation exacte des extraits sources.
+- 📝 **Résumé Exécutif Automatique** : Extraction des points clés, du domaine et du niveau de complexité.
+- 🔍 **Recherche MMR Vectorielle** : Maximisation de la diversité des passages récupérés pour éviter la redondance.
+- 📊 **Métriques de Latence & Chunks** : Suivi de la distribution des embeddings et du temps de réponse.
+
+---
+
+## 🛠️ Installation & Lancement
 
 ```bash
+# Cloner le dépôt
+git clone https://github.com/KalsoumDS/RAG-Document-Intelligence.git
+cd RAG-Document-Intelligence
+
+# Installer les dépendances
 pip install -r requirements.txt
-```
 
-## Obtenir une clé Mistral (gratuit)
-
-1. Aller sur [console.mistral.ai](https://console.mistral.ai)
-2. Créer un compte (pas de carte bancaire)
-3. Générer une clé API dans "API Keys"
-4. Coller la clé dans la sidebar du dashboard
-
-## Lancement
-
-```bash
+# Obtenir une clé API Mistral (Gratuit sur console.mistral.ai)
+# Puis lancer l'application Streamlit
 streamlit run app.py
 ```
 
-## Structure du projet
+---
 
-```
-rag-document-intelligence/
-├── core/
-│   ├── rag_pipeline.py     ← Pipeline RAG (LangChain + Mistral + ChromaDB)
-│   └── __init__.py
-├── chroma_db/              ← Vectorstore persistant (généré automatiquement)
-├── app.py                  ← Dashboard Streamlit
-├── requirements.txt
-└── README.md
-```
+## 🔬 Stack Technique
 
-## Stack technique
+- **LangChain** — Orchestration globale du pipeline RAG
+- **Mistral AI** — API Embeddings (`mistral-embed`) & LLM (`mistral-small`)
+- **ChromaDB** — Base de données vectorielle persistante
+- **Streamlit & Plotly** — Interface utilisateur & métriques d'analyse
 
-- LangChain — Orchestration du pipeline RAG
-- Mistral AI — Embeddings (mistral-embed) + LLM (mistral-small)
-- ChromaDB — Base vectorielle persistante
-- MMR (Maximum Marginal Relevance) — Retrieval avec diversité
-- Streamlit — Dashboard interactif
+---
 
-## Auteur
+## ✍️ Auteur
 
-Oumou Kaltoum Sall — Data Scientist & ML Engineer  
-[GitHub](https://github.com/KalsoumDS) · [Email](mailto:s.sall@mundiapolis.ma)
+**Oumou Kaltoum Sall** — Data Scientist & ML Engineer  
+[LinkedIn](https://linkedin.com/in/oumou-kaltoum-sall) · [GitHub](https://github.com/KalsoumDS) · [Portfolio](http://localhost:3001)
