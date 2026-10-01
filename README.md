@@ -1,85 +1,73 @@
-# 📄 Intelligence Documentaire RAG & Analyse de Politiques / ESG
+# RAG Document Intelligence — Structured Document Analysis Pipeline
 
-> Démocratisation de l'accès aux réglementations, au droit du travail et aux rapports d'impact (ESG, Climat) via RAG Multimodal — LangChain · Mistral AI · ChromaDB · Streamlit
+> Semantic search and 100% sourced Q&A over ESG reports, legal texts and regulatory documents using LangChain, Mistral AI, FAISS and Streamlit.
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![LangChain](https://img.shields.io/badge/LangChain-0.2+-green)
-![Mistral](https://img.shields.io/badge/Mistral_AI-API-orange)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.35+-red)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://python.org)
+[![LangChain](https://img.shields.io/badge/LangChain-0.2+-green)](https://langchain.com)
+[![Mistral](https://img.shields.io/badge/Mistral_AI-API-orange)](https://mistral.ai)
+[![Live Demo](https://img.shields.io/badge/Demo-Live-brightgreen)](https://rag-document-intelligence-2dkrcn85yperhuxoqg6p6g.streamlit.app/)
 
----
-
-## 🎯 Problématique Métier & Impact Sociétal
-
-Les ONG, citoyens et PME se perdent dans des milliers de pages de textes juridiques, rapports d'impact environnemental (RSE/ESG) ou réglementations administratives complexes.
-
-### 💡 Solution & Valeur Ajoutée
-Cette plateforme d'**Intelligence Documentaire RAG** permet d'interroger des corpus volumineux en langage naturel, en garantissant des **réponses 100% sourcées** avec citation exacte des pages et paragraphes d'origine.
-- **Transparence & Zéro Hallucination** : Filtrage strict par Maximum Marginal Relevance (MMR) et citation des sources.
-- **Accès Simplifié aux Textes de Loi & ESG** : Synthèse automatique des points clés et extraction d'insights complexes en quelques secondes.
+**Live application:** https://rag-document-intelligence-2dkrcn85yperhuxoqg6p6g.streamlit.app/
 
 ---
 
-## 🏗️ Architecture RAG
+## Overview
+
+NGOs, citizens and SMEs struggle to navigate thousands of pages of legal documents, ESG impact reports, and complex administrative regulations. This RAG pipeline allows users to query large document corpora in natural language while guaranteeing 100% sourced answers with exact page and paragraph citations.
+
+---
+
+## Architecture
 
 ```
-Documents complexes (PDF, DOCX, TXT - Textes de Loi / Rapports RSE)
-                            ↓
-                 RecursiveTextSplitter
-               (chunks 1000 chars, overlap 200)
-                            ↓
-               Mistral Embeddings (mistral-embed)
-                            ↓
-               ChromaDB (Vectorstore persistant)
-                            ↓
-                    Question Utilisateur
-                            ↓
-       MMR Retrieval (Maximum Marginal Relevance - Top-K)
-                            ↓
-         Mistral LLM (mistral-small) + Prompt Engineering
-                            ↓
-                Réponse Structurée & Sourcée
+Input Documents (PDF, DOCX, TXT)
+    |
+RecursiveTextSplitter (chunks: 1000 chars, overlap: 200)
+    |
+Mistral Embeddings (mistral-embed)
+    |
+FAISS Vector Store (persistent index)
+    |
+MMR Re-ranking (Maximum Marginal Relevance)
+    |
+Mistral LLM (mistral-medium) — sourced answer generation
+    |
+Streamlit Interface — Q&A with page citations
 ```
 
 ---
 
-## 🚀 Fonctionnalités Clés
+## Key Features
 
-- 📁 **Multi-Documents** : Ingestion simultanée de plusieurs rapports et textes réglementaires.
-- 🎯 **Q&A 100% Sourcé** : Réponses précises accompagnées de la citation exacte des extraits sources.
-- 📝 **Résumé Exécutif Automatique** : Extraction des points clés, du domaine et du niveau de complexité.
-- 🔍 **Recherche MMR Vectorielle** : Maximisation de la diversité des passages récupérés pour éviter la redondance.
-- 📊 **Métriques de Latence & Chunks** : Suivi de la distribution des embeddings et du temps de réponse.
+- **Zero hallucination** — Strict MMR filtering ensures answers are grounded in the source document.
+- **Source citation** — Every answer includes the exact page number and paragraph origin.
+- **Multi-format ingestion** — PDF, DOCX, TXT supported.
+- **Persistent vector index** — FAISS index is saved locally; no re-embedding required between sessions.
 
 ---
 
-## 🛠️ Installation & Lancement
+## Installation
 
 ```bash
-# Cloner le dépôt
 git clone https://github.com/KalsoumDS/RAG-Document-Intelligence.git
 cd RAG-Document-Intelligence
-
-# Installer les dépendances
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-
-# Obtenir une clé API Mistral (Gratuit sur console.mistral.ai)
-# Puis lancer l'application Streamlit
+# Add your Mistral API key to a .env file: MISTRAL_API_KEY=your_key
 streamlit run app.py
 ```
 
 ---
 
-## 🔬 Stack Technique
+## Technologies
 
-- **LangChain** — Orchestration globale du pipeline RAG
-- **Mistral AI** — API Embeddings (`mistral-embed`) & LLM (`mistral-small`)
-- **ChromaDB** — Base de données vectorielle persistante
-- **Streamlit & Plotly** — Interface utilisateur & métriques d'analyse
+- Python 3.10+, LangChain 0.2+, Mistral AI API
+- FAISS, Streamlit, PyPDF2, python-docx
 
 ---
 
-## ✍️ Auteur
+## Author
 
-**Oumou Kaltoum Sall** — Data Scientist & ML Engineer  
-[LinkedIn](https://linkedin.com/in/oumou-kaltoum-sall) · [GitHub](https://github.com/KalsoumDS) · [Portfolio](http://localhost:3001)
+Oumou Kaltoum Sall — Data Scientist & ML Engineer  
+[Portfolio](https://luxury-sunshine-073627.netlify.app) · [LinkedIn](https://linkedin.com/in/oumou-kaltoum-sall)
