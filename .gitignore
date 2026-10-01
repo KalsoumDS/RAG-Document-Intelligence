@@ -1,0 +1,13 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+env/
+chroma_db/
+vectorstore/
+*.pdf
+*.docx
+.pytest_cache/
