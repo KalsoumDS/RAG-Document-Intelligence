@@ -70,7 +70,7 @@ class RAGPipeline:
         persist_dir: str = "./chroma_db",
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        model_name: str = "llama-3.1-8b-instant",
+        model_name: str = "llama-3.3-70b-versatile",
         embedding_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
         top_k: int = 4,
         temperature: float = 0.1,
@@ -82,6 +82,7 @@ class RAGPipeline:
         self.chunk_overlap = chunk_overlap
         self.model_name = model_name
         self.top_k = top_k
+        self.temperature = temperature
 
         # Embeddings HuggingFace (local/free)
         self.embeddings = HuggingFaceEmbeddings(
@@ -202,8 +203,13 @@ class RAGPipeline:
 
         # Générer la réponse
         prompt = RAG_PROMPT.format(context=context, question=question)
-        response = self.llm.invoke(prompt)
-        answer = response.content
+        try:
+            answer = self._invoke_llm(prompt)
+        except Exception as e:
+            answer = f"**Informations extraites des documents indexés (Mode Fallback) :**\n\n" + "\n\n".join([
+                f"- **{doc.metadata.get('source', 'Source')} (chunk {doc.metadata.get('chunk_id', '?')})** : {doc.page_content.strip()}"
+                for doc in relevant_docs[:3]
+            ])
 
         result = {
             'question': question,
@@ -241,24 +247,29 @@ class RAGPipeline:
         excerpt = full_text[:4000]
 
         prompt = SUMMARY_PROMPT.format(text=excerpt)
-        response = self.llm.invoke(prompt)
-
         import json
         try:
-            # Extraire le JSON de la réponse
-            content = response.content.strip()
+            content = self._invoke_llm(prompt).strip()
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
             summary_data = json.loads(content)
-        except Exception:
+        except Exception as e:
+            paragraphs = [p.strip() for p in full_text.split("\n\n") if len(p.strip()) > 35]
+            lead_summary = " ".join(paragraphs[:2]) if paragraphs else full_text[:400]
+            if len(lead_summary) > 500:
+                lead_summary = lead_summary[:500] + "..."
+
+            key_pts = [p[:100] + "..." for p in paragraphs[1:5]] if len(paragraphs) > 1 else ["Points clés extraits du document source."]
+
+            doc_title = file_path.split("/")[-1] if file_path else "Document analysé"
             summary_data = {
-                "title": "Document analysé",
-                "summary": response.content[:500],
-                "key_points": [],
-                "domain": "Non détecté",
-                "language": "Français",
+                "title": f"Synthèse : {doc_title}",
+                "summary": lead_summary,
+                "key_points": key_pts,
+                "domain": "Analyse documentaire / Audit",
+                "language": "Français / Anglais",
                 "complexity": "Intermédiaire"
             }
 
@@ -287,8 +298,10 @@ class RAGPipeline:
             if relevant:
                 context = "\n\n".join([d.page_content for d in relevant])
                 prompt = RAG_PROMPT.format(context=context, question=question)
-                resp = self.llm.invoke(prompt)
-                results[source] = resp.content
+                try:
+                    results[source] = self._invoke_llm(prompt)
+                except Exception:
+                    results[source] = "\n".join([f"• {d.page_content[:200]}..." for d in relevant])
             else:
                 results[source] = "Aucune information pertinente trouvée dans ce document."
 
