@@ -15,3 +15,4 @@ pandas>=2.0.0
 numpy>=1.24.0
 tiktoken>=0.7.0
 python-dotenv>=1.0.0
+# ragas>=0.1.0  # Optional: install to use the production RAGAS evaluation framework
