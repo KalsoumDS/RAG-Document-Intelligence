@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest numpy
+          pip install langchain langchain-core langchain-text-splitters langchain-community
+          pip install chromadb sentence-transformers streamlit pypdf python-docx plotly pandas tiktoken python-dotenv
+
+      - name: Lint (ruff)
+        run: ruff check . --select E,W,F --ignore E501
+
+      - name: Test (pytest)
+        run: pytest tests/ -v --tb=short
