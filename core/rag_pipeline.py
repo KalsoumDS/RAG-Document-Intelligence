@@ -227,12 +227,7 @@ class RAGPipeline:
             answer = self._invoke_llm(prompt)
         except Exception as e:
             generation_error = e
-            answer = f"**Informations extraites des documents indexés (Mode Fallback) :**\n\n" + "\n\n".join([
-                f"- **{doc.metadata.get('source', 'Source')} (chunk {doc.metadata.get('chunk_id', '?')})** : {doc.page_content.strip()}"
-                for doc in relevant_docs[:3]
-            ])
-            if not relevant_docs:
-                answer = "Aucun passage pertinent n'a été retrouvé dans les documents."
+            answer = None
 
         result = {
             'question': question,
@@ -241,6 +236,10 @@ class RAGPipeline:
         }
         if generation_error is not None:
             result['generation_failed'] = True
+            result['generation_error_type'] = type(generation_error).__name__
+            status_code = getattr(generation_error, 'status_code', None)
+            if isinstance(status_code, int):
+                result['generation_status_code'] = status_code
 
         if return_sources:
             result['sources'] = [

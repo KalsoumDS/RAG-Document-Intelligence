@@ -12,8 +12,10 @@ Features :
 """
 import inspect
 import json
+import logging
 import tempfile
 import time
+from html import escape
 
 import streamlit as st
 import plotly.graph_objects as go
@@ -274,14 +276,43 @@ def submitted_question(chat_input, session_state):
 
 
 def format_sources(sources: list) -> str:
-    html = ""
+    markup = ""
     for s in sources:
-        html += f"""
+        markup += f"""
         <div class="source-card">
-            <b>{s['source']}</b> — chunk #{s['chunk_id']}<br/>
-            <span style="color:#888;font-size:0.8rem">{s['content']}</span>
+            <b>{escape(str(s['source']))}</b> — passage #{escape(str(s['chunk_id']))}<br/>
+            <span style="color:#888;font-size:0.9rem">{escape(str(s['content']))}</span>
         </div>"""
-    return html
+    return markup
+
+
+def render_generation_failure(sources: list) -> None:
+    st.error("La réponse de l’assistant n’a pas pu être générée.")
+    st.caption(
+        "Les documents restent indexés. Réessayez dans quelques instants. "
+        "Aucun extrait n’est présenté comme une réponse de l’assistant."
+    )
+    if sources:
+        with st.expander(f"Consulter les {len(sources)} passages retrouvés"):
+            st.markdown(format_sources(sources), unsafe_allow_html=True)
+    else:
+        st.info("Aucun passage pertinent n’a été retrouvé pour cette question.")
+
+
+def generation_failure_detail(result: dict) -> str:
+    status_code = result.get('generation_status_code')
+    if status_code in (401, 403):
+        return "Vérifiez la clé API et les autorisations du fournisseur."
+    if status_code == 404:
+        return "Le modèle configuré n’est pas disponible chez le fournisseur."
+    if status_code == 429:
+        return "La limite de requêtes ou le quota du fournisseur est atteint."
+    if isinstance(status_code, int) and status_code >= 500:
+        return "Le fournisseur IA rencontre une erreur temporaire."
+    error_type = result.get('generation_error_type', '')
+    if 'Connection' in error_type or 'Timeout' in error_type:
+        return "La connexion au fournisseur IA a échoué ou a expiré."
+    return "Vérifiez la configuration du fournisseur IA et consultez ses logs."
 
 
 def plot_chunks_distribution(ingested: list):
@@ -509,11 +540,14 @@ def main():
         # Afficher l'historique
         for msg in st.session_state.chat_history:
             with st.chat_message(msg['role']):
-                st.markdown(msg['content'], unsafe_allow_html=True)
-                if msg.get('sources'):
+                if msg.get('generation_failed'):
+                    render_generation_failure(msg.get('sources', []))
+                else:
+                    st.markdown(msg['content'])
+                if msg.get('sources') and not msg.get('generation_failed'):
                     with st.expander(f"{len(msg['sources'])} source(s) utilisée(s)"):
                         st.markdown(format_sources(msg['sources']), unsafe_allow_html=True)
-                if msg.get('latency'):
+                if msg.get('latency') and not msg.get('generation_failed'):
                     st.caption(f"{msg['latency']:.2f}s · {msg.get('model', model)}")
 
         # Input
@@ -541,20 +575,26 @@ def main():
                         st.session_state.total_latency += latency
 
                         if result.get('generation_failed'):
-                            st.warning(
-                                "Le modèle IA n'a pas généré de réponse. "
-                                "Les extraits retrouvés sont affichés en mode secours."
+                            logging.warning(
+                                "RAG generation failed (%s, HTTP %s)",
+                                result.get('generation_error_type', 'unknown error'),
+                                result.get('generation_status_code', 'n/a'),
                             )
-                        st.markdown(result['answer'])
-                        if result.get('sources'):
+                            render_generation_failure(result.get('sources', []))
+                            st.caption(generation_failure_detail(result))
+                        else:
+                            st.markdown(result['answer'])
+                        if result.get('sources') and not result.get('generation_failed'):
                             with st.expander(f"{result['n_sources']} source(s) utilisée(s)"):
                                 st.markdown(format_sources(result['sources']), unsafe_allow_html=True)
-                        st.caption(f"{latency:.2f}s · {model} · {result['n_sources']} chunks utilisés")
+                        if not result.get('generation_failed'):
+                            st.caption(f"{latency:.2f}s · {model} · {result['n_sources']} chunks utilisés")
 
                         st.session_state.chat_history.append({
                             'role': 'assistant',
                             'content': result['answer'],
                             'sources': result.get('sources', []),
+                            'generation_failed': result.get('generation_failed', False),
                             'latency': latency,
                             'model': model,
                             'timestamp': datetime.now().isoformat()

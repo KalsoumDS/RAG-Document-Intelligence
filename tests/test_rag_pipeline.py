@@ -119,4 +119,5 @@ def test_query_marks_fallback_when_chat_model_fails():
     result = pipeline.query("What does the report say?")
 
     assert result["generation_failed"] is True
-    assert "Mode Fallback" in result["answer"]
+    assert result["answer"] is None
+    assert result["generation_error_type"] == "RuntimeError"
