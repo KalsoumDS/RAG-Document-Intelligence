@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import hashlib
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader

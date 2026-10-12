@@ -9,7 +9,6 @@ from langchain_core.documents import Document
 
 from core.rag_pipeline import (
     RAGPipeline,
-    expand_retrieved_chunks,
     group_chunks_by_source_page,
     merge_chunk_overlaps,
     select_summary_excerpt,
