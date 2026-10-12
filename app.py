@@ -10,11 +10,12 @@ Features :
   - Historique de conversation
   - Métriques : chunks, tokens, latence
 """
-import streamlit as st
-import os
-import time
-import tempfile
+import inspect
 import json
+import tempfile
+import time
+
+import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -243,6 +244,27 @@ def get_pipeline(api_key: str, chunk_size: int, chunk_overlap: int,
     )
 
 
+def ingest_uploaded_file(pipeline, filename: str, file_bytes: bytes):
+    """Ingest with stable identity across older and newer pipeline signatures."""
+    source_name = Path(filename).name
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_path = Path(temp_dir) / source_name
+        file_path.write_bytes(file_bytes)
+        parameters = inspect.signature(pipeline.ingest).parameters.values()
+        supports_source_name = any(
+            parameter.name == "source_name"
+            or parameter.kind == inspect.Parameter.VAR_KEYWORD
+            for parameter in parameters
+        )
+        if supports_source_name:
+            return pipeline.ingest(
+                str(file_path),
+                file_bytes,
+                source_name=source_name,
+            )
+        return pipeline.ingest(str(file_path), file_bytes)
+
+
 def format_sources(sources: list) -> str:
     html = ""
     for s in sources:
@@ -394,20 +416,11 @@ def main():
                 if uf.name not in [d['filename'] for d in st.session_state.ingested_files]:
                     with st.spinner(f"Ingestion de {uf.name}..."):
                         try:
-                            # Sauvegarder temporairement
-                            with tempfile.NamedTemporaryFile(
-                                delete=False,
-                                suffix=Path(uf.name).suffix
-                            ) as tmp:
-                                tmp.write(uf.getvalue())
-                                tmp_path = tmp.name
-
-                            stats = pipeline.ingest(
-                                tmp_path,
+                            stats = ingest_uploaded_file(
+                                pipeline,
+                                uf.name,
                                 uf.getvalue(),
-                                source_name=uf.name,
                             )
-                            os.unlink(tmp_path)
 
                             st.session_state.ingested_files.append(stats)
                             st.session_state.pipeline = pipeline
