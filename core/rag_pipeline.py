@@ -170,37 +170,38 @@ def merge_chunk_overlaps(chunks: list[Document]) -> str:
     return merged
 
 
-def _group_consecutive_chunks(chunks: list[Document]) -> list[tuple[tuple[str, str], list[Document]]]:
-    groups = []
-    current_key = None
-    current_chunks = []
-    previous_id = None
-
-    for document in sorted(
+def group_chunks_by_source_page(chunks: list[Document]) -> list[tuple[tuple[str, str], list[Document]]]:
+    ordered = sorted(
         chunks,
         key=lambda item: (
             str(item.metadata.get("source", "unknown")),
+            str(item.metadata.get("page", "non précisée")),
             item.metadata.get("chunk_id", -1),
         ),
-    ):
+    )
+    groups = []
+    current_key = None
+    current_chunks = []
+    previous_chunk_id = None
+    for document in ordered:
         source = str(document.metadata.get("source", "unknown"))
         page = document.metadata.get("page")
+        page_label = str(page) if page is not None else "non précisée"
+        key = (source, page_label)
         chunk_id = document.metadata.get("chunk_id")
-        key = (source, str(page) if page is not None else "non précisée")
-        is_consecutive = (
+        consecutive = (
             current_key == key
             and isinstance(chunk_id, int)
-            and isinstance(previous_id, int)
-            and chunk_id == previous_id + 1
+            and isinstance(previous_chunk_id, int)
+            and chunk_id == previous_chunk_id + 1
         )
-        if current_chunks and not is_consecutive:
+        if current_chunks and not consecutive:
             groups.append((current_key, current_chunks))
             current_chunks = []
         if not current_chunks:
             current_key = key
         current_chunks.append(document)
-        previous_id = chunk_id
-
+        previous_chunk_id = chunk_id
     if current_chunks:
         groups.append((current_key, current_chunks))
     return groups
@@ -364,12 +365,13 @@ class RAGPipeline:
 
         # Récupérer les chunks pertinents
         relevant_docs = retriever.invoke(question)
-        context_docs = expand_retrieved_chunks(self.vectorstore, relevant_docs)
+        context_docs = expand_retrieved_chunks(self.vectorstore, relevant_docs, neighbors=1)
+        context_groups = group_chunks_by_source_page(context_docs)
 
         # Construire le contexte
         context = "\n\n---\n\n".join(
             f"[Source : {source}; page : {page}]\n{merge_chunk_overlaps(chunks)}"
-            for (source, page), chunks in _group_consecutive_chunks(context_docs)
+            for (source, page), chunks in context_groups
         )
 
         # Générer la réponse
@@ -394,16 +396,19 @@ class RAGPipeline:
                 result['generation_status_code'] = status_code
 
         if return_sources:
-            result['sources'] = [
-                {
-                    'source': doc.metadata.get('source', 'unknown'),
-                    'chunk_id': doc.metadata.get('chunk_id', 0),
-                    'page': doc.metadata.get('page'),
-                    'content': doc.page_content,
+            result['sources'] = []
+            for (source, page_label), group in context_groups:
+                first_chunk = group[0].metadata.get("chunk_id", 0)
+                last_chunk = group[-1].metadata.get("chunk_id", first_chunk)
+                result['sources'].append({
+                    'source': source,
+                    'chunk_id': first_chunk,
+                    'first_chunk_id': first_chunk,
+                    'last_chunk_id': last_chunk,
+                    'page': page_label if page_label != "non précisée" else None,
+                    'content': merge_chunk_overlaps(group),
                     'relevance_score': None,
-                }
-                for doc in relevant_docs
-            ]
+                })
 
         return result
 
@@ -471,7 +476,15 @@ class RAGPipeline:
             )
             relevant = retriever.invoke(question)
             if relevant:
-                context = "\n\n".join([d.page_content for d in relevant])
+                context_docs = expand_retrieved_chunks(
+                    self.vectorstore,
+                    relevant,
+                    neighbors=1,
+                )
+                context = "\n\n".join(
+                    merge_chunk_overlaps(group)
+                    for _, group in group_chunks_by_source_page(context_docs)
+                )
                 prompt = RAG_PROMPT.format(context=context, question=question)
                 try:
                     results[source] = self._invoke_llm(prompt)

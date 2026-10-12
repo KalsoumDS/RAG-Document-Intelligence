@@ -278,10 +278,17 @@ def submitted_question(chat_input, session_state):
 def format_sources(sources: list) -> str:
     markup = ""
     for s in sources:
+        first_chunk = s.get('first_chunk_id', s.get('chunk_id', '?'))
+        last_chunk = s.get('last_chunk_id', first_chunk)
+        chunk_label = (
+            f"passages #{escape(str(first_chunk))}–#{escape(str(last_chunk))}"
+            if first_chunk != last_chunk
+            else f"passage #{escape(str(first_chunk))}"
+        )
         markup += f"""
         <div class="source-card">
             <b>{escape(str(s['source']))}</b>
-            — passage #{escape(str(s['chunk_id']))}
+            — {chunk_label}
             {f" · page {escape(str(s['page']))}" if s.get('page') is not None else ""}
             <pre style="white-space:pre-wrap;font:inherit;color:inherit;margin:.5rem 0 0">{escape(str(s['content']))}</pre>
         </div>"""

@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from core.rag_pipeline import (
     RAGPipeline,
     expand_retrieved_chunks,
+    group_chunks_by_source_page,
     merge_chunk_overlaps,
     select_summary_excerpt,
 )
@@ -159,8 +160,27 @@ def test_query_expands_relevant_match_to_adjacent_chunks():
     assert "clearly defined dataset" in prompts[0]
     assert "results that support the conclusion" in prompts[0]
     assert "unrelated appendix text" not in prompts[0]
-    assert result["sources"][0]["content"] == "on a clearly defined dataset"
-    assert result["sources"][0]["page"] == 2
+    assert "evaluated a new method" in result["sources"][0]["content"]
+    assert "results that support the conclusion" in result["sources"][0]["content"]
+    assert result["sources"][0]["page"] == "2"
+    assert (result["sources"][0]["first_chunk_id"], result["sources"][0]["last_chunk_id"]) == (1, 3)
+
+
+def test_source_groups_do_not_merge_non_adjacent_context():
+    chunks = [
+        Document(page_content="First relevant section.", metadata={
+            "source": "report.pdf", "chunk_id": 2, "page": 1,
+        }),
+        Document(page_content="Second relevant section.", metadata={
+            "source": "report.pdf", "chunk_id": 8, "page": 4,
+        }),
+    ]
+
+    groups = group_chunks_by_source_page(chunks)
+
+    assert len(groups) == 2
+    assert groups[0][1][0].page_content == "First relevant section."
+    assert groups[1][1][0].page_content == "Second relevant section."
 
 
 def test_adjacent_chunks_merge_without_duplicate_overlap():
