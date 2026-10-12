@@ -29,8 +29,11 @@ RAG_PROMPT = PromptTemplate(
     template="""Tu es un assistant expert en analyse de documents techniques et scientifiques.
 Réponds à la question en te basant UNIQUEMENT sur le contexte fourni.
 Si la réponse n'est pas dans le contexte, dis-le clairement.
-Cite les passages pertinents entre guillemets quand c'est utile.
-Réponds dans la même langue que la question.
+Cite les sources avec leur nom et leur page lorsqu'ils sont disponibles.
+Rédige une réponse complète et naturelle dans la même langue que la question.
+Ne recopie pas des fragments bruts et ne coupe pas une phrase au milieu.
+Structure la réponse avec une réponse directe, puis les éléments utiles et leurs sources.
+Si les passages sont insuffisants ou contradictoires, explique clairement cette limite.
 
 Contexte :
 {context}
@@ -71,7 +74,8 @@ def select_summary_excerpt(full_text: str, max_chars: int = 16000, windows: int 
 
     window_count = max(1, min(windows, max_chars // 1000))
     label_budget = window_count * 24
-    window_size = max(1, (max_chars - label_budget) // window_count)
+    window_budget = max(1, (max_chars - label_budget) // window_count)
+    window_size = max(1, window_budget - 500)
     last_start = len(text) - window_size
     starts = []
     for index in range(window_count):
@@ -81,11 +85,125 @@ def select_summary_excerpt(full_text: str, max_chars: int = 16000, windows: int 
             target = line_start
         starts.append(target)
     starts = list(dict.fromkeys(starts))
-    excerpts = [
-        f"[Extrait {index + 1}/{window_count}]\n{text[start:start + window_size]}"
-        for index, start in enumerate(starts)
-    ]
+    excerpts = []
+    for index, start in enumerate(starts):
+        if start > 0 and index == window_count - 1:
+            previous_boundary = text.rfind("\n", 0, start)
+            if previous_boundary >= 0:
+                start = previous_boundary + 1
+        elif start > 0:
+            next_boundary = min(
+                (
+                    position + len(separator)
+                    for separator in ("\n", ". ", "? ", "! ")
+                    if (position := text.find(separator, start, min(start + 250, len(text)))) >= 0
+                ),
+                default=start,
+            )
+            start = next_boundary
+        end = min(start + window_size, len(text))
+        if end < len(text):
+            candidates = [
+                position
+                for separator in ("\n", ". ", "? ", "! ")
+                if (position := text.find(separator, end, min(end + 500, len(text)))) >= 0
+            ]
+            if candidates:
+                end = min(candidates) + 1
+        excerpts.append(f"[Extrait {index + 1}/{window_count}]\n{text[start:end].strip()}")
     return "\n\n".join(excerpts)
+
+
+def expand_retrieved_chunks(vectorstore, relevant_docs: list, neighbors: int = 1) -> list:
+    """Add adjacent chunks to each match so the model receives complete context."""
+    by_source: dict[str, dict[int, Document]] = {}
+    selected: dict[str, set[int]] = {}
+    for document in relevant_docs:
+        source = str(document.metadata.get("source", "unknown"))
+        chunk_id = document.metadata.get("chunk_id")
+        if isinstance(chunk_id, int):
+            selected.setdefault(source, set()).update(
+                range(max(0, chunk_id - neighbors), chunk_id + neighbors + 1)
+            )
+        else:
+            by_source.setdefault(source, {})[-1] = document
+
+    for source in selected:
+        stored = vectorstore.get(
+            where={"source": source},
+            include=["documents", "metadatas"],
+        )
+        source_chunks = by_source.setdefault(source, {})
+        for metadata, content in zip(stored["metadatas"], stored["documents"]):
+            chunk_id = metadata.get("chunk_id")
+            if isinstance(chunk_id, int) and chunk_id in selected[source]:
+                source_chunks[chunk_id] = Document(
+                    page_content=content,
+                    metadata=metadata,
+                )
+
+    return [
+        document
+        for source in sorted(by_source)
+        for _, document in sorted(by_source[source].items())
+    ]
+
+
+def merge_chunk_overlaps(chunks: list[Document]) -> str:
+    """Join adjacent chunks without duplicating their configured overlap text."""
+    merged = ""
+    for chunk in chunks:
+        content = chunk.page_content.strip()
+        overlap_limit = min(len(merged), len(content), 500)
+        overlap = max(
+            (
+                size
+                for size in range(1, overlap_limit + 1)
+                if merged.endswith(content[:size])
+            ),
+            default=0,
+        )
+        if merged and content:
+            merged += content[overlap:] if overlap else "\n\n" + content
+        else:
+            merged += content
+    return merged
+
+
+def _group_consecutive_chunks(chunks: list[Document]) -> list[tuple[tuple[str, str], list[Document]]]:
+    groups = []
+    current_key = None
+    current_chunks = []
+    previous_id = None
+
+    for document in sorted(
+        chunks,
+        key=lambda item: (
+            str(item.metadata.get("source", "unknown")),
+            item.metadata.get("chunk_id", -1),
+        ),
+    ):
+        source = str(document.metadata.get("source", "unknown"))
+        page = document.metadata.get("page")
+        chunk_id = document.metadata.get("chunk_id")
+        key = (source, str(page) if page is not None else "non précisée")
+        is_consecutive = (
+            current_key == key
+            and isinstance(chunk_id, int)
+            and isinstance(previous_id, int)
+            and chunk_id == previous_id + 1
+        )
+        if current_chunks and not is_consecutive:
+            groups.append((current_key, current_chunks))
+            current_chunks = []
+        if not current_chunks:
+            current_key = key
+        current_chunks.append(document)
+        previous_id = chunk_id
+
+    if current_chunks:
+        groups.append((current_key, current_chunks))
+    return groups
 
 
 class RAGPipeline:
@@ -246,13 +364,13 @@ class RAGPipeline:
 
         # Récupérer les chunks pertinents
         relevant_docs = retriever.invoke(question)
+        context_docs = expand_retrieved_chunks(self.vectorstore, relevant_docs)
 
         # Construire le contexte
-        context = "\n\n---\n\n".join([
-            f"[Source: {doc.metadata.get('source', 'unknown')}, "
-            f"chunk {doc.metadata.get('chunk_id', '?')}]\n{doc.page_content}"
-            for doc in relevant_docs
-        ])
+        context = "\n\n---\n\n".join(
+            f"[Source : {source}; page : {page}]\n{merge_chunk_overlaps(chunks)}"
+            for (source, page), chunks in _group_consecutive_chunks(context_docs)
+        )
 
         # Générer la réponse
         prompt = RAG_PROMPT.format(context=context, question=question)
@@ -280,7 +398,8 @@ class RAGPipeline:
                 {
                     'source': doc.metadata.get('source', 'unknown'),
                     'chunk_id': doc.metadata.get('chunk_id', 0),
-                    'content': doc.page_content[:300] + '...' if len(doc.page_content) > 300 else doc.page_content,
+                    'page': doc.metadata.get('page'),
+                    'content': doc.page_content,
                     'relevance_score': None,
                 }
                 for doc in relevant_docs
@@ -356,8 +475,11 @@ class RAGPipeline:
                 prompt = RAG_PROMPT.format(context=context, question=question)
                 try:
                     results[source] = self._invoke_llm(prompt)
-                except Exception:
-                    results[source] = "\n".join([f"• {d.page_content[:200]}..." for d in relevant])
+                except Exception as error:
+                    results[source] = (
+                        "La réponse de l’assistant n’a pas pu être générée pour ce document. "
+                        f"Type d’erreur : {type(error).__name__}. Réessayez plus tard."
+                    )
             else:
                 results[source] = "Aucune information pertinente trouvée dans ce document."
 

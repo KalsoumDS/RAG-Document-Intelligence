@@ -7,7 +7,12 @@ from types import SimpleNamespace
 import pytest
 from langchain_core.documents import Document
 
-from core.rag_pipeline import RAGPipeline, select_summary_excerpt
+from core.rag_pipeline import (
+    RAGPipeline,
+    expand_retrieved_chunks,
+    merge_chunk_overlaps,
+    select_summary_excerpt,
+)
 
 
 class FakeVectorStore:
@@ -27,6 +32,18 @@ class FakeVectorStore:
     def add_documents(self, documents, *, ids):
         self.added_ids.append(ids)
         self.documents.update(zip(ids, documents))
+
+    def get(self, *, where, include):
+        documents = [
+            (doc_id, document)
+            for doc_id, document in self.documents.items()
+            if document.metadata.get("source") == where["source"]
+        ]
+        return {
+            "ids": [doc_id for doc_id, _ in documents],
+            "documents": [document.page_content for _, document in documents],
+            "metadatas": [document.metadata for _, document in documents],
+        }
 
     def as_retriever(self, **kwargs):
         return SimpleNamespace(invoke=lambda question: [
@@ -108,6 +125,53 @@ def test_query_uses_configured_chat_model_instead_of_fallback():
     assert result["answer"] == "Generated answer"
     assert len(invocations) == 1
     assert "What does the report say?" in invocations[0]
+
+
+def test_query_expands_relevant_match_to_adjacent_chunks():
+    pipeline = make_pipeline()
+    store = pipeline.vectorstore
+    for chunk_id, content in enumerate([
+        "The study asked an important question",
+        "and evaluated a new method",
+        "on a clearly defined dataset",
+        "with results that support the conclusion",
+        "unrelated appendix text",
+    ]):
+        store.documents[f"doc:{chunk_id}"] = Document(
+            page_content=content,
+            metadata={"source": "report.pdf", "chunk_id": chunk_id, "page": 2},
+        )
+    store.as_retriever = lambda **kwargs: SimpleNamespace(invoke=lambda question: [
+        store.documents["doc:2"]
+    ])
+    prompts = []
+
+    class FakeLLM:
+        def invoke(self, prompt):
+            prompts.append(prompt)
+            return SimpleNamespace(content="Complete answer.")
+
+    pipeline.llm = FakeLLM()
+    result = pipeline.query("What was the result?")
+
+    assert result["answer"] == "Complete answer."
+    assert "evaluated a new method" in prompts[0]
+    assert "clearly defined dataset" in prompts[0]
+    assert "results that support the conclusion" in prompts[0]
+    assert "unrelated appendix text" not in prompts[0]
+    assert result["sources"][0]["content"] == "on a clearly defined dataset"
+    assert result["sources"][0]["page"] == 2
+
+
+def test_adjacent_chunks_merge_without_duplicate_overlap():
+    chunks = [
+        Document(page_content="The model produced a reliable result"),
+        Document(page_content="reliable result across the full test set."),
+    ]
+
+    assert merge_chunk_overlaps(chunks) == (
+        "The model produced a reliable result across the full test set."
+    )
 
 
 def test_query_marks_fallback_when_chat_model_fails():

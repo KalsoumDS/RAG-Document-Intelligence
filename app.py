@@ -280,8 +280,10 @@ def format_sources(sources: list) -> str:
     for s in sources:
         markup += f"""
         <div class="source-card">
-            <b>{escape(str(s['source']))}</b> — passage #{escape(str(s['chunk_id']))}<br/>
-            <span style="color:#888;font-size:0.9rem">{escape(str(s['content']))}</span>
+            <b>{escape(str(s['source']))}</b>
+            — passage #{escape(str(s['chunk_id']))}
+            {f" · page {escape(str(s['page']))}" if s.get('page') is not None else ""}
+            <pre style="white-space:pre-wrap;font:inherit;color:inherit;margin:.5rem 0 0">{escape(str(s['content']))}</pre>
         </div>"""
     return markup
 
