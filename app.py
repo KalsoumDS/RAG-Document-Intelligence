@@ -354,7 +354,7 @@ def plot_ragas_radar() -> go.Figure:
     """Génère un graphique Radar interactif des 4 piliers RAGAS."""
     categories = ['Faithfulness (Fidélité)', 'Answer Relevance', 'Context Precision', 'Context Recall']
     fig = go.Figure()
-    
+
     # Dense baseline
     fig.add_trace(go.Scatterpolar(
         r=[0.84, 0.81, 0.82, 0.78],
@@ -363,7 +363,7 @@ def plot_ragas_radar() -> go.Figure:
         name='Dense FAISS seul',
         line=dict(color='#94a3b8', dash='dash')
     ))
-    
+
     # Hybrid RRF SOTA
     fig.add_trace(go.Scatterpolar(
         r=[0.94, 0.93, 0.95, 0.91],
@@ -373,7 +373,7 @@ def plot_ragas_radar() -> go.Figure:
         line=dict(color='#6366f1', width=2.5),
         fillcolor='rgba(99, 102, 241, 0.25)'
     ))
-    
+
     fig.update_layout(
         polar=dict(radialaxis=dict(visible=True, range=[0, 1.0])),
         showlegend=True,
@@ -428,7 +428,7 @@ def main():
             api_key = st.secrets.get("GROQ_API_KEY", "")
         except Exception:
             api_key = ""
-        
+
         if not api_key:
             api_key = st.text_input(
                 "Clé API Groq",
@@ -518,22 +518,22 @@ def main():
         with col1:
             st.markdown("""
             **1. Upload**
-            
-            Charge tes documents PDF, DOCX ou TXT. 
+
+            Charge tes documents PDF, DOCX ou TXT.
             Le pipeline les découpe en chunks intelligents.
             """)
         with col2:
             st.markdown("""
             **2. Analyse**
-            
-            Résumé automatique, extraction des points clés, 
+
+            Résumé automatique, extraction des points clés,
             détection de la langue et du domaine.
             """)
         with col3:
             st.markdown("""
             **3. Q&A**
-            
-            Pose des questions en langage naturel. 
+
+            Pose des questions en langage naturel.
             Les sources sont citées avec leurs passages exacts.
             """)
         return

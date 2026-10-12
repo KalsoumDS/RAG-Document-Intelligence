@@ -3,7 +3,6 @@ Unit tests for RAGAS-style RAG evaluation metrics.
 """
 from __future__ import annotations
 
-import pytest
 from ragas_eval import (
     RAGSample,
     evaluate_rag_pipeline,
