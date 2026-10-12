@@ -222,6 +222,7 @@ def init_state():
         'api_key_set': False,
         'total_queries': 0,
         'total_latency': 0.0,
+        'pending_question': None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -263,6 +264,13 @@ def ingest_uploaded_file(pipeline, filename: str, file_bytes: bytes):
                 source_name=source_name,
             )
         return pipeline.ingest(str(file_path), file_bytes)
+
+
+def submitted_question(chat_input, session_state):
+    """Return typed input or consume a question selected from suggestions."""
+    if chat_input:
+        return chat_input
+    return session_state.pop('pending_question', None)
 
 
 def format_sources(sources: list) -> str:
@@ -509,7 +517,11 @@ def main():
                     st.caption(f"{msg['latency']:.2f}s · {msg.get('model', model)}")
 
         # Input
-        if question := st.chat_input("Pose une question sur tes documents..."):
+        question = submitted_question(
+            st.chat_input("Pose une question sur tes documents..."),
+            st.session_state,
+        )
+        if question:
             # Afficher la question
             st.session_state.chat_history.append({
                 'role': 'user', 'content': question,
@@ -528,6 +540,11 @@ def main():
                         st.session_state.total_queries += 1
                         st.session_state.total_latency += latency
 
+                        if result.get('generation_failed'):
+                            st.warning(
+                                "Le modèle IA n'a pas généré de réponse. "
+                                "Les extraits retrouvés sont affichés en mode secours."
+                            )
                         st.markdown(result['answer'])
                         if result.get('sources'):
                             with st.expander(f"{result['n_sources']} source(s) utilisée(s)"):
@@ -557,10 +574,7 @@ def main():
             cols = st.columns(2)
             for i, sug in enumerate(suggestions):
                 if cols[i % 2].button(sug, use_container_width=True):
-                    st.session_state.chat_history.append({
-                        'role': 'user', 'content': sug,
-                        'timestamp': datetime.now().isoformat()
-                    })
+                    st.session_state.pending_question = sug
                     st.rerun()
 
     # ── TAB 2 : RÉSUMÉS ───────────────────────────────────────────────────────

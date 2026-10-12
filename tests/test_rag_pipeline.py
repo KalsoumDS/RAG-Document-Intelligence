@@ -106,3 +106,17 @@ def test_query_uses_configured_chat_model_instead_of_fallback():
     assert result["answer"] == "Generated answer"
     assert len(invocations) == 1
     assert "What does the report say?" in invocations[0]
+
+
+def test_query_marks_fallback_when_chat_model_fails():
+    pipeline = make_pipeline()
+
+    class FailingLLM:
+        def invoke(self, prompt):
+            raise RuntimeError("provider unavailable")
+
+    pipeline.llm = FailingLLM()
+    result = pipeline.query("What does the report say?")
+
+    assert result["generation_failed"] is True
+    assert "Mode Fallback" in result["answer"]

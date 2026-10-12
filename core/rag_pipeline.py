@@ -222,19 +222,25 @@ class RAGPipeline:
 
         # Générer la réponse
         prompt = RAG_PROMPT.format(context=context, question=question)
+        generation_error = None
         try:
             answer = self._invoke_llm(prompt)
         except Exception as e:
+            generation_error = e
             answer = f"**Informations extraites des documents indexés (Mode Fallback) :**\n\n" + "\n\n".join([
                 f"- **{doc.metadata.get('source', 'Source')} (chunk {doc.metadata.get('chunk_id', '?')})** : {doc.page_content.strip()}"
                 for doc in relevant_docs[:3]
             ])
+            if not relevant_docs:
+                answer = "Aucun passage pertinent n'a été retrouvé dans les documents."
 
         result = {
             'question': question,
             'answer': answer,
             'n_sources': len(relevant_docs),
         }
+        if generation_error is not None:
+            result['generation_failed'] = True
 
         if return_sources:
             result['sources'] = [
