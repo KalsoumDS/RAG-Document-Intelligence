@@ -170,6 +170,24 @@ def merge_chunk_overlaps(chunks: list[Document]) -> str:
     return merged
 
 
+def get_indexed_document_text(vectorstore, source: str) -> str:
+    """Rebuild a complete document from ordered, overlapping vector-store chunks."""
+    stored = vectorstore.get(
+        where={"source": source},
+        include=["documents", "metadatas"],
+    )
+    chunks = sorted(
+        zip(stored["metadatas"], stored["documents"]),
+        key=lambda item: item[0].get("chunk_id", 0),
+    )
+    if not chunks:
+        raise ValueError("Aucun passage indexé pour ce document.")
+    return merge_chunk_overlaps([
+        Document(page_content=content, metadata=metadata)
+        for metadata, content in chunks
+    ])
+
+
 def group_chunks_by_source_page(chunks: list[Document]) -> list[tuple[tuple[str, str], list[Document]]]:
     ordered = sorted(
         chunks,

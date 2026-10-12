@@ -9,6 +9,7 @@ from langchain_core.documents import Document
 
 from core.rag_pipeline import (
     RAGPipeline,
+    get_indexed_document_text,
     group_chunks_by_source_page,
     merge_chunk_overlaps,
     select_summary_excerpt,
@@ -191,6 +192,24 @@ def test_adjacent_chunks_merge_without_duplicate_overlap():
     assert merge_chunk_overlaps(chunks) == (
         "The model produced a reliable result across the full test set."
     )
+
+
+def test_indexed_document_text_restores_order_and_removes_overlap():
+    store = FakeVectorStore()
+    store.documents = {
+        "chunk-1": Document(
+            page_content="The study reached a clear conclusion",
+            metadata={"source": "report.pdf", "chunk_id": 1},
+        ),
+        "chunk-0": Document(
+            page_content="The study reached a clear",
+            metadata={"source": "report.pdf", "chunk_id": 0},
+        ),
+    }
+
+    text = get_indexed_document_text(store, "report.pdf")
+
+    assert text == "The study reached a clear conclusion"
 
 
 def test_query_marks_fallback_when_chat_model_fails():

@@ -295,6 +295,12 @@ def format_sources(sources: list) -> str:
     return markup
 
 
+def indexed_document_text(vectorstore, filename: str) -> str:
+    from core.rag_pipeline import get_indexed_document_text
+
+    return get_indexed_document_text(vectorstore, filename)
+
+
 def render_generation_failure(sources: list) -> None:
     st.error("La réponse de l’assistant n’a pas pu être générée.")
     st.caption(
@@ -629,33 +635,51 @@ def main():
     # ── TAB 2 : RÉSUMÉS ───────────────────────────────────────────────────────
     with tab2:
         st.markdown('<div class="section-header">Résumés automatiques</div>', unsafe_allow_html=True)
+        missing_summaries = [
+            doc for doc in st.session_state.ingested_files
+            if doc['filename'] not in st.session_state.summaries
+        ]
+        if missing_summaries:
+            st.info(
+                "Aucun résumé n’a encore été généré pour "
+                f"{len(missing_summaries)} document(s). Lancez la génération ci-dessous."
+            )
+            if st.button(
+                f"Générer les résumés manquants ({len(missing_summaries)})",
+                type="primary",
+                use_container_width=True,
+                key="generate_missing_summaries",
+            ):
+                progress = st.progress(0, text="Préparation des résumés...")
+                for index, doc in enumerate(missing_summaries):
+                    fname = doc['filename']
+                    try:
+                        st.session_state.summaries[fname] = pipeline.summarize(
+                            text=indexed_document_text(pipeline.vectorstore, fname),
+                            file_path=fname,
+                        )
+                    except Exception as e:
+                        st.error(f"Impossible de générer le résumé de {fname} : {e}")
+                    progress.progress(
+                        (index + 1) / len(missing_summaries),
+                        text=f"Document traité : {fname}",
+                    )
+                progress.empty()
 
         for doc_info in st.session_state.ingested_files:
             fname = doc_info['filename']
-            col_h, col_btn = st.columns([4, 1])
-            with col_h:
-                st.markdown(f"**{fname}**")
-            with col_btn:
-                gen_btn = st.button(
-                    "Générer" if fname not in st.session_state.summaries else "Regénérer",
-                    key=f"sum_{fname}", use_container_width=True
-                )
+            st.markdown(f"### {fname}")
 
-            if gen_btn:
+            if fname in st.session_state.summaries and st.button(
+                "Regénérer ce résumé",
+                key=f"sum_{fname}",
+            ):
                 with st.spinner(f"Analyse de {fname}..."):
                     try:
-                        stored = pipeline.vectorstore.get(
-                            where={"source": fname},
-                            include=["documents", "metadatas"],
+                        summary = pipeline.summarize(
+                            text=indexed_document_text(pipeline.vectorstore, fname),
+                            file_path=fname,
                         )
-                        chunks = sorted(
-                            zip(stored["metadatas"], stored["documents"]),
-                            key=lambda item: item[0].get("chunk_id", 0),
-                        )
-                        if not chunks:
-                            raise ValueError("Aucun passage indexé pour ce document.")
-                        text = "\n\n".join(document for _, document in chunks)
-                        summary = pipeline.summarize(text=text, file_path=fname)
                         st.session_state.summaries[fname] = summary
                     except Exception as e:
                         st.session_state.summaries.pop(fname, None)
@@ -691,6 +715,11 @@ def main():
                         f"Analyse de {s['sampled_text_length']:,} caractères répartis "
                         f"dans le document · {doc_info['n_chunks']} segments indexés."
                     )
+            else:
+                st.warning(
+                    "Résumé non généré pour ce document. Utilisez le bouton "
+                    "« Générer les résumés manquants » ci-dessus."
+                )
             st.divider()
 
     # ── TAB 3 : COMPARAISON ───────────────────────────────────────────────────
