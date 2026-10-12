@@ -210,6 +210,84 @@ hr {
     background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
     margin: 2rem 0;
 }
+
+/* RAG is styled as a calm document workspace, distinct from the ML dashboards. */
+[data-testid="stAppViewContainer"] {
+    background:
+        radial-gradient(ellipse at 85% 0%, rgba(216, 180, 120, .14), transparent 35%),
+        #f5f3ee;
+    color: #252c36;
+}
+h1 {
+    background: linear-gradient(105deg, #493b31 0%, #9c7049 85%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+[data-testid="stCaptionContainer"] {
+    color: #6d7480;
+}
+[data-testid="stSidebar"] {
+    background: #eeece6;
+    border-right: 1px solid #d9d5ca;
+}
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #334155 !important;
+}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+    color: #475569;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: .35rem;
+    border-bottom: 1px solid #d8d2c5;
+    background: #ebe8e0;
+    border-radius: 8px 8px 0 0;
+    padding: .35rem .45rem 0;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 44px;
+    padding: 0 1rem;
+    color: #586579;
+    border-radius: 6px 6px 0 0;
+    font-weight: 650;
+}
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background: #fffdf8;
+    color: #6d4c2f !important;
+    box-shadow: inset 0 -3px #bb8755;
+}
+.source-card {
+    background: #fffdf8;
+    border: 1px solid #e4dccd;
+    border-left: 3px solid #bb8755;
+    border-radius: 6px;
+    color: #374151;
+}
+.metric-card {
+    background: #fffdf8;
+    border: 1px solid #e4dccd;
+    box-shadow: 0 4px 14px rgba(53, 45, 31, .05);
+}
+[data-testid="stChatMessage"] {
+    background: #fffdf8;
+    border: 1px solid #e4dccd;
+}
+[data-testid="stDataFrame"],
+[data-testid="stPlotlyChart"] {
+    border: 1px solid #e0dbcf;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.stButton > button[kind="primary"] {
+    background: #795638;
+    border-color: #795638;
+    color: #fffdf8;
+}
+.stButton > button[kind="primary"]:hover {
+    background: #63442b;
+    border-color: #63442b;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -341,7 +419,7 @@ def plot_chunks_distribution(ingested: list):
         title='Distribution des chunks par document'
     )
     fig.update_layout(
-        template='plotly_dark', height=300,
+        template='plotly_white', height=300,
         margin=dict(l=0, r=0, t=40, b=0),
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
         showlegend=False
@@ -377,7 +455,7 @@ def plot_ragas_radar() -> go.Figure:
     fig.update_layout(
         polar=dict(radialaxis=dict(visible=True, range=[0, 1.0])),
         showlegend=True,
-        template="plotly_dark",
+        template="plotly_white",
         height=380,
         margin=dict(l=30, r=30, t=30, b=30),
         legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
@@ -401,7 +479,7 @@ def plot_chat_activity(history: list):
         name='Latence (s)'
     ))
     fig.update_layout(
-        template='plotly_dark', height=200,
+        template='plotly_white', height=200,
         title='Latence des réponses (secondes)',
         xaxis_title='Question #', yaxis_title='Latence (s)',
         margin=dict(l=0, r=0, t=40, b=0),
@@ -544,7 +622,7 @@ def main():
 
     # ── ONGLETS ───────────────────────────────────────────────────────────────
     tab1, tab2, tab3, tab4 = st.tabs([
-        "Q&A Chat", "Résumés", "Comparaison", "Métriques"
+        "Questions", "Résumés", "Comparer", "Activité"
     ])
 
     # ── TAB 1 : Q&A CHAT ──────────────────────────────────────────────────────
