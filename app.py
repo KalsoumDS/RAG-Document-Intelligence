@@ -635,36 +635,53 @@ def main():
             if gen_btn:
                 with st.spinner(f"Analyse de {fname}..."):
                     try:
-                        # Récupérer le texte depuis le vectorstore
-                        docs = pipeline.vectorstore.similarity_search(
-                            "résumé synthèse contenu principal", k=6,
-                            filter={"source": fname}
+                        stored = pipeline.vectorstore.get(
+                            where={"source": fname},
+                            include=["documents", "metadatas"],
                         )
-                        text = "\n\n".join([d.page_content for d in docs])
-                        summary = pipeline.summarize(text=text)
+                        chunks = sorted(
+                            zip(stored["metadatas"], stored["documents"]),
+                            key=lambda item: item[0].get("chunk_id", 0),
+                        )
+                        if not chunks:
+                            raise ValueError("Aucun passage indexé pour ce document.")
+                        text = "\n\n".join(document for _, document in chunks)
+                        summary = pipeline.summarize(text=text, file_path=fname)
                         st.session_state.summaries[fname] = summary
                     except Exception as e:
-                        st.error(f"{e}")
+                        st.session_state.summaries.pop(fname, None)
+                        st.error(f"Impossible de générer le résumé de {fname} : {e}")
 
             if fname in st.session_state.summaries:
                 s = st.session_state.summaries[fname]
                 with st.expander(f"Résumé — {s.get('title', fname)}", expanded=True):
-                    col_a, col_b = st.columns([2, 1])
+                    st.markdown("#### Synthèse exécutive")
+                    st.write(s["summary"])
+                    col_a, col_b = st.columns(2)
                     with col_a:
-                        st.markdown(f"**Résumé :**\n\n{s.get('summary', '')}")
-                        st.markdown("**Points clés :**")
-                        for pt in s.get('key_points', []):
-                            st.markdown(f"- {pt}")
+                        st.markdown("#### Objectif")
+                        st.write(s["objectives"])
+                        st.markdown("#### Méthodologie")
+                        st.write(s["methodology"])
+                        st.markdown("#### Résultats principaux")
+                        st.write(s["key_findings"])
                     with col_b:
-                        st.markdown(f"""
-                        <div style='background:#111;border:1px solid #222;border-radius:8px;padding:16px'>
-                        <div class='tag tag-blue'>{s.get('domain', '?')}</div><br/>
-                        <div class='tag tag-green'>{s.get('language', '?')}</div>
-                        <div class='tag tag-purple'>{s.get('complexity', '?')}</div><br/><br/>
-                        <b>{s.get('n_words', '?')} mots</b><br/>
-                        <b>{doc_info['n_chunks']} chunks</b>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown("#### Conclusion")
+                        st.write(s["conclusion"])
+                        st.markdown("#### Limites")
+                        st.write(s["limitations"])
+                    st.markdown("#### Points clés")
+                    for point in s["key_points"]:
+                        st.markdown(f"- {point}")
+                    metadata_cols = st.columns(4)
+                    metadata_cols[0].metric("Domaine", s.get("domain", "Non précisé"))
+                    metadata_cols[1].metric("Langue", s.get("language", "Non précisée"))
+                    metadata_cols[2].metric("Complexité", s.get("complexity", "Non précisée"))
+                    metadata_cols[3].metric("Mots analysés", f"{s['n_words']:,}")
+                    st.caption(
+                        f"Analyse de {s['sampled_text_length']:,} caractères répartis "
+                        f"dans le document · {doc_info['n_chunks']} segments indexés."
+                    )
             st.divider()
 
     # ── TAB 3 : COMPARAISON ───────────────────────────────────────────────────

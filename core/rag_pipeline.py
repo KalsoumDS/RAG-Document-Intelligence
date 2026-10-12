@@ -41,17 +41,51 @@ Réponse :"""
 )
 
 SUMMARY_PROMPT = """Analyse ce document et produis un résumé structuré en JSON avec :
-- "title": titre ou sujet principal du document
-- "summary": résumé en 3-5 phrases
-- "key_points": liste de 5 points clés
-- "domain": domaine (ex: Machine Learning, Finance, Médecine...)
-- "language": langue du document
-- "complexity": niveau de complexité (Débutant / Intermédiaire / Expert)
+- "title": titre exact s'il est visible, sinon sujet principal
+- "summary": synthèse exécutive claire en 4 à 6 phrases, sans répéter le titre
+- "objectives": objectif ou problématique du document
+- "methodology": méthodes, données et protocole décrits
+- "key_findings": résultats majeurs, avec chiffres uniquement s'ils figurent dans le texte
+- "conclusion": conclusion et recommandations du document
+- "limitations": limites reconnues par les auteurs, ou "Non précisées dans le document"
+- "key_points": liste de 3 à 5 informations distinctes, sans répétition
+- "domain": domaine principal du document
+- "language": langue principalement utilisée dans le document
+- "complexity": Débutant, Intermédiaire ou Expert
 
-Document (extrait) :
+Règles : écris dans la langue principale du document. N'invente aucune information.
+Distingue explicitement les résultats des auteurs des comparaisons à la littérature.
+Le texte fourni contient des extraits répartis dans le document : synthétise-les ensemble.
+
+Extraits du document :
 {text}
 
-Réponds UNIQUEMENT avec le JSON, sans texte autour."""
+Retourne uniquement un objet JSON valide, sans balises Markdown ni texte avant/après."""
+
+
+def select_summary_excerpt(full_text: str, max_chars: int = 16000, windows: int = 8) -> str:
+    """Sample evenly across long documents so the summary is not introduction-only."""
+    text = full_text.strip()
+    if len(text) <= max_chars:
+        return text
+
+    window_count = max(1, min(windows, max_chars // 1000))
+    label_budget = window_count * 24
+    window_size = max(1, (max_chars - label_budget) // window_count)
+    last_start = len(text) - window_size
+    starts = []
+    for index in range(window_count):
+        target = round(index * last_start / max(window_count - 1, 1))
+        line_start = text.rfind("\n", 0, target) + 1
+        if target - line_start <= window_size * 0.5:
+            target = line_start
+        starts.append(target)
+    starts = list(dict.fromkeys(starts))
+    excerpts = [
+        f"[Extrait {index + 1}/{window_count}]\n{text[start:start + window_size]}"
+        for index, start in enumerate(starts)
+    ]
+    return "\n\n".join(excerpts)
 
 
 class RAGPipeline:
@@ -259,17 +293,18 @@ class RAGPipeline:
         Génère un résumé structuré d'un document.
         Peut prendre un fichier ou un texte brut.
         """
-        if file_path:
+        if text is not None:
+            full_text = text
+        elif file_path:
             docs = self.load_document(file_path)
             full_text = "\n".join([d.page_content for d in docs])
-        elif text:
-            full_text = text
         else:
             raise ValueError("Fournir file_path ou text")
 
-        # Limiter à ~4000 chars pour l'API
-        excerpt = full_text[:4000]
+        if not full_text.strip():
+            raise ValueError("Le document ne contient pas de texte exploitable.")
 
+        excerpt = select_summary_excerpt(full_text)
         prompt = SUMMARY_PROMPT.format(text=excerpt)
         import json
         try:
@@ -279,26 +314,23 @@ class RAGPipeline:
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
             summary_data = json.loads(content)
-        except Exception as e:
-            paragraphs = [p.strip() for p in full_text.split("\n\n") if len(p.strip()) > 35]
-            lead_summary = " ".join(paragraphs[:2]) if paragraphs else full_text[:400]
-            if len(lead_summary) > 500:
-                lead_summary = lead_summary[:500] + "..."
+        except json.JSONDecodeError as e:
+            raise ValueError("Le modèle a renvoyé un résumé non structuré. Réessayez.") from e
 
-            key_pts = [p[:100] + "..." for p in paragraphs[1:5]] if len(paragraphs) > 1 else ["Points clés extraits du document source."]
-
-            doc_title = file_path.split("/")[-1] if file_path else "Document analysé"
-            summary_data = {
-                "title": f"Synthèse : {doc_title}",
-                "summary": lead_summary,
-                "key_points": key_pts,
-                "domain": "Analyse documentaire / Audit",
-                "language": "Français / Anglais",
-                "complexity": "Intermédiaire"
-            }
-
+        if not isinstance(summary_data, dict):
+            raise ValueError("Le modèle n’a pas renvoyé un objet de résumé valide.")
+        required_fields = ("title", "summary", "objectives", "methodology",
+                           "key_findings", "conclusion", "limitations", "key_points")
+        missing_fields = [field for field in required_fields if not summary_data.get(field)]
+        if missing_fields:
+            raise ValueError(
+                "Le résumé généré est incomplet : " + ", ".join(missing_fields)
+            )
+        if not isinstance(summary_data["key_points"], list):
+            raise ValueError("Le modèle doit renvoyer les points clés sous forme de liste.")
         summary_data['full_text_length'] = len(full_text)
         summary_data['n_words'] = len(full_text.split())
+        summary_data['sampled_text_length'] = len(excerpt)
         return summary_data
 
     def compare_documents(self, question: str) -> Dict[str, Any]:

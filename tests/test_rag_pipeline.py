@@ -1,11 +1,13 @@
 """Regression tests for document ingestion and chat invocation."""
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
+import pytest
 from langchain_core.documents import Document
 
-from core.rag_pipeline import RAGPipeline
+from core.rag_pipeline import RAGPipeline, select_summary_excerpt
 
 
 class FakeVectorStore:
@@ -121,3 +123,62 @@ def test_query_marks_fallback_when_chat_model_fails():
     assert result["generation_failed"] is True
     assert result["answer"] is None
     assert result["generation_error_type"] == "RuntimeError"
+
+
+def test_summary_samples_text_across_long_documents():
+    text = "\n".join(
+        f"SECTION_{index} " + ("x" * 2400)
+        for index in range(20)
+    )
+
+    excerpt = select_summary_excerpt(text)
+
+    assert len(excerpt) <= 16000
+    assert "SECTION_0" in excerpt
+    assert "SECTION_19" in excerpt
+    assert any(f"SECTION_{index}" in excerpt for index in range(8, 13))
+
+
+def test_summary_uses_all_indexed_text_and_returns_structured_fields(monkeypatch):
+    pipeline = make_pipeline()
+    text = "Opening section. " + ("Body content. " * 2000) + "Final conclusion."
+    response = {
+        "title": "Document title",
+        "summary": "Executive summary.",
+        "objectives": "Study objective.",
+        "methodology": "Methods described.",
+        "key_findings": "Main finding.",
+        "conclusion": "Conclusion.",
+        "limitations": "Non précisées.",
+        "key_points": ["Point one", "Point two"],
+        "domain": "Research",
+        "language": "English",
+        "complexity": "Intermédiaire",
+    }
+    prompts = []
+    monkeypatch.setattr(
+        pipeline,
+        "_invoke_llm",
+        lambda prompt: prompts.append(prompt) or json.dumps(response),
+    )
+
+    summary = pipeline.summarize(text=text, file_path="report.pdf")
+
+    assert summary["title"] == "Document title"
+    assert summary["n_words"] == len(text.split())
+    assert summary["full_text_length"] == len(text)
+    assert "Opening section." in prompts[0]
+    assert "Final conclusion." in prompts[0]
+    assert "[Extrait 8/8]" in prompts[0]
+
+
+def test_summary_does_not_silently_return_raw_text_when_model_fails(monkeypatch):
+    pipeline = make_pipeline()
+    monkeypatch.setattr(
+        pipeline,
+        "_invoke_llm",
+        lambda prompt: '{"summary": "incomplete"}',
+    )
+
+    with pytest.raises(ValueError, match="résumé généré est incomplet"):
+        pipeline.summarize(text="A document with enough useful content.")
