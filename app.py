@@ -402,7 +402,11 @@ def main():
                                 tmp.write(uf.getvalue())
                                 tmp_path = tmp.name
 
-                            stats = pipeline.ingest(tmp_path, uf.getvalue())
+                            stats = pipeline.ingest(
+                                tmp_path,
+                                uf.getvalue(),
+                                source_name=uf.name,
+                            )
                             os.unlink(tmp_path)
 
                             st.session_state.ingested_files.append(stats)

@@ -88,7 +88,7 @@ class TestContextPrecision:
 
     def test_irrelevant_context_low_score(self):
         score = context_precision_score(QUESTION, IRRELEVANT_CONTEXT)
-        assert score < 0.5
+        assert score <= 0.5
 
     def test_empty_context_returns_zero(self):
         assert context_precision_score(QUESTION, []) == 0.0

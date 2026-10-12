@@ -122,8 +122,8 @@ class RAGPipeline:
                 self.vectorstore = None
 
     def _doc_id(self, filename: str, content: bytes) -> str:
-        """Hash unique pour éviter les doublons."""
-        return hashlib.md5(f"{filename}{len(content)}".encode()).hexdigest()[:8]
+        """Return a stable ID for a filename and its contents."""
+        return hashlib.sha256(filename.encode() + b"\0" + content).hexdigest()
 
     def load_document(self, file_path: str) -> List[Document]:
         """Charge un document selon son extension."""
@@ -138,12 +138,19 @@ class RAGPipeline:
             raise ValueError(f"Format non supporté : {ext}. Formats acceptés : PDF, DOCX, TXT")
         return loader.load()
 
-    def ingest(self, file_path: str, file_bytes: bytes = None) -> Dict[str, Any]:
+    def ingest(
+        self,
+        file_path: str,
+        file_bytes: bytes = None,
+        source_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Ingère un document dans le vectorstore.
         Retourne des stats sur l'ingestion.
         """
-        filename = Path(file_path).name
+        filename = source_name or Path(file_path).name
+        content = file_bytes if file_bytes is not None else Path(file_path).read_bytes()
+        document_id = self._doc_id(filename, content)
         docs = self.load_document(file_path)
 
         # Chunking
@@ -156,17 +163,21 @@ class RAGPipeline:
                 'source': filename,
                 'chunk_id': i,
                 'total_chunks': n_chunks,
+                'document_id': document_id,
             })
 
         # Ajout au vectorstore
+        chunk_ids = [f"{document_id}:{i}" for i in range(n_chunks)]
         if self.vectorstore is None:
             self.vectorstore = Chroma.from_documents(
                 chunks,
                 self.embeddings,
-                persist_directory=self.persist_dir
+                persist_directory=self.persist_dir,
+                ids=chunk_ids,
             )
         else:
-            self.vectorstore.add_documents(chunks)
+            self.vectorstore.delete(where={'source': filename})
+            self.vectorstore.add_documents(chunks, ids=chunk_ids)
 
         stats = {
             'filename': filename,
@@ -175,8 +186,16 @@ class RAGPipeline:
             'avg_chunk_size': int(sum(len(c.page_content) for c in chunks) / max(n_chunks, 1)),
             'total_chars': sum(len(c.page_content) for c in chunks),
         }
+        self.ingested_docs = [
+            doc for doc in self.ingested_docs if doc['filename'] != filename
+        ]
         self.ingested_docs.append(stats)
         return stats
+
+    def _invoke_llm(self, prompt: str) -> str:
+        """Invoke the configured chat model and return its response text."""
+        response = self.llm.invoke(prompt)
+        return response.content
 
     def query(self, question: str, return_sources: bool = True) -> Dict[str, Any]:
         """
