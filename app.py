@@ -26,7 +26,7 @@ from datetime import datetime
 
 # ── CONFIG ───────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="RAG Document Intelligence",
+    page_title="Analyse documentaire RAG",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -359,9 +359,9 @@ def format_sources(sources: list) -> str:
         first_chunk = s.get('first_chunk_id', s.get('chunk_id', '?'))
         last_chunk = s.get('last_chunk_id', first_chunk)
         chunk_label = (
-            f"passages #{escape(str(first_chunk))}–#{escape(str(last_chunk))}"
+            f"segments nos {escape(str(first_chunk))} à {escape(str(last_chunk))}"
             if first_chunk != last_chunk
-            else f"passage #{escape(str(first_chunk))}"
+            else f"segment no {escape(str(first_chunk))}"
         )
         markup += f"""
         <div class="source-card">
@@ -415,8 +415,8 @@ def plot_chunks_distribution(ingested: list):
     fig = px.bar(
         df, x='filename', y='n_chunks',
         color='n_chunks', color_continuous_scale='Viridis',
-        labels={'filename': 'Document', 'n_chunks': 'Nombre de chunks'},
-        title='Distribution des chunks par document'
+        labels={'filename': 'Document', 'n_chunks': 'Nombre de segments'},
+        title='Nombre de segments par document'
     )
     fig.update_layout(
         template='plotly_white', height=300,
@@ -430,7 +430,7 @@ def plot_chunks_distribution(ingested: list):
 
 def plot_ragas_radar() -> go.Figure:
     """Génère un graphique Radar interactif des 4 piliers RAGAS."""
-    categories = ['Faithfulness (Fidélité)', 'Answer Relevance', 'Context Precision', 'Context Recall']
+    categories = ['Fidélité', 'Pertinence de la réponse', 'Précision du contexte', 'Rappel du contexte']
     fig = go.Figure()
 
     # Dense baseline
@@ -438,7 +438,7 @@ def plot_ragas_radar() -> go.Figure:
         r=[0.84, 0.81, 0.82, 0.78],
         theta=categories,
         fill='toself',
-        name='Dense FAISS seul',
+        name='Recherche vectorielle FAISS seule',
         line=dict(color='#94a3b8', dash='dash')
     ))
 
@@ -447,7 +447,7 @@ def plot_ragas_radar() -> go.Figure:
         r=[0.94, 0.93, 0.95, 0.91],
         theta=categories,
         fill='toself',
-        name='Hybrid Search (Dense + BM25 RRF)',
+        name='Recherche hybride (vectorielle + BM25/RRF)',
         line=dict(color='#6366f1', width=2.5),
         fillcolor='rgba(99, 102, 241, 0.25)'
     ))
@@ -480,8 +480,8 @@ def plot_chat_activity(history: list):
     ))
     fig.update_layout(
         template='plotly_white', height=200,
-        title='Latence des réponses (secondes)',
-        xaxis_title='Question #', yaxis_title='Latence (s)',
+        title='Temps de réponse (secondes)',
+        xaxis_title='Numéro de question', yaxis_title='Latence (s)',
         margin=dict(l=0, r=0, t=40, b=0),
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)'
     )
@@ -492,8 +492,8 @@ def plot_chat_activity(history: list):
 def main():
     # Header
     st.markdown("""
-    # RAG Document Intelligence
-    ## Analyse, interroge et compare tes documents — LangChain · Groq AI · ChromaDB
+    # Analyse documentaire RAG
+    ## Analysez, interrogez et comparez vos documents — LangChain · Groq · ChromaDB
     """)
     st.divider()
 
@@ -524,12 +524,12 @@ def main():
             help="Modèles open-source ultra-rapides hébergés sur Groq"
         )
 
-        st.markdown("### Chunking")
-        chunk_size = st.slider("Taille des chunks (chars)", 500, 2000, 1000, 100)
-        chunk_overlap = st.slider("Chevauchement", 50, 400, 200, 50)
+        st.markdown("### Découpage des documents")
+        chunk_size = st.slider("Taille des segments (caractères)", 500, 2000, 1000, 100)
+        chunk_overlap = st.slider("Chevauchement entre les segments", 50, 400, 200, 50)
 
-        st.markdown("### Retrieval")
-        top_k = st.slider("Chunks récupérés (top-k)", 2, 8, 4)
+        st.markdown("### Recherche documentaire")
+        top_k = st.slider("Nombre de segments à récupérer", 2, 8, 4)
 
         st.divider()
 
@@ -546,7 +546,7 @@ def main():
             pipeline = get_pipeline(api_key, chunk_size, chunk_overlap, model, top_k)
             for uf in uploaded_files:
                 if uf.name not in [d['filename'] for d in st.session_state.ingested_files]:
-                    with st.spinner(f"Ingestion de {uf.name}..."):
+                    with st.spinner(f"Indexation de {uf.name}…"):
                         try:
                             stats = ingest_uploaded_file(
                                 pipeline,
@@ -556,15 +556,15 @@ def main():
 
                             st.session_state.ingested_files.append(stats)
                             st.session_state.pipeline = pipeline
-                            st.success(f"{uf.name} — {stats['n_chunks']} chunks")
+                            st.success(f"{uf.name} — {stats['n_chunks']} segments indexés")
                         except Exception as e:
                             st.error(f"{uf.name} : {e}")
 
         # Liste des fichiers ingérés
         if st.session_state.ingested_files:
-            st.markdown(f"**{len(st.session_state.ingested_files)} document(s) chargé(s)**")
+            st.markdown(f"**{len(st.session_state.ingested_files)} document(s) indexé(s)**")
             for d in st.session_state.ingested_files:
-                st.markdown(f"- `{d['filename']}` ({d['n_chunks']} chunks)")
+                st.markdown(f"- `{d['filename']}` ({d['n_chunks']} segments)")
 
         st.divider()
 
@@ -580,8 +580,8 @@ def main():
 
         st.markdown("""
         ---
-        **Stack :**
-        LangChain · Groq AI · HuggingFace · ChromaDB · Streamlit
+        **Technologies :**
+        LangChain · Groq · Hugging Face · ChromaDB · Streamlit
 
         **Auteur :**
         [Oumou Kaltoum Sall](https://github.com/KalsoumDS)
@@ -595,10 +595,10 @@ def main():
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown("""
-            **1. Upload**
+            **1. Importation**
 
-            Charge tes documents PDF, DOCX ou TXT.
-            Le pipeline les découpe en chunks intelligents.
+            Importez vos documents PDF, DOCX ou TXT.
+            Le système les découpe en segments pertinents.
             """)
         with col2:
             st.markdown("""
@@ -609,10 +609,10 @@ def main():
             """)
         with col3:
             st.markdown("""
-            **3. Q&A**
+            **3. Questions et réponses**
 
-            Pose des questions en langage naturel.
-            Les sources sont citées avec leurs passages exacts.
+            Posez vos questions en langage naturel.
+            Les réponses citent les passages utilisés.
             """)
         return
 
@@ -628,7 +628,7 @@ def main():
     # ── TAB 1 : Q&A CHAT ──────────────────────────────────────────────────────
     with tab1:
         st.markdown('<div class="section-header">Questions & Réponses</div>', unsafe_allow_html=True)
-        st.caption(f"Base vectorielle : **{pipeline.total_chunks} chunks** de **{pipeline.n_documents} document(s)**")
+        st.caption(f"Base vectorielle : **{pipeline.total_chunks} segments** issus de **{pipeline.n_documents} document(s)**")
 
         # Afficher l'historique
         for msg in st.session_state.chat_history:
@@ -638,14 +638,14 @@ def main():
                 else:
                     st.markdown(msg['content'])
                 if msg.get('sources') and not msg.get('generation_failed'):
-                    with st.expander(f"{len(msg['sources'])} source(s) utilisée(s)"):
+                    with st.expander(f"{len(msg['sources'])} source(s) consultée(s)"):
                         st.markdown(format_sources(msg['sources']), unsafe_allow_html=True)
                 if msg.get('latency') and not msg.get('generation_failed'):
                     st.caption(f"{msg['latency']:.2f}s · {msg.get('model', model)}")
 
         # Input
         question = submitted_question(
-            st.chat_input("Pose une question sur tes documents..."),
+            st.chat_input("Posez une question sur vos documents…"),
             st.session_state,
         )
         if question:
@@ -659,7 +659,7 @@ def main():
 
             # Générer la réponse
             with st.chat_message('assistant'):
-                with st.spinner("Recherche dans les documents..."):
+                with st.spinner("Recherche dans les documents…"):
                     t0 = time.time()
                     try:
                         result = pipeline.query(question)
@@ -678,10 +678,10 @@ def main():
                         else:
                             st.markdown(result['answer'])
                         if result.get('sources') and not result.get('generation_failed'):
-                            with st.expander(f"{result['n_sources']} source(s) utilisée(s)"):
+                            with st.expander(f"{result['n_sources']} source(s) consultée(s)"):
                                 st.markdown(format_sources(result['sources']), unsafe_allow_html=True)
                         if not result.get('generation_failed'):
-                            st.caption(f"{latency:.2f}s · {model} · {result['n_sources']} chunks utilisés")
+                            st.caption(f"{latency:.2f} s · {model} · {result['n_sources']} segments utilisés")
 
                         st.session_state.chat_history.append({
                             'role': 'assistant',
@@ -697,7 +697,7 @@ def main():
 
         # Questions suggérées
         if not st.session_state.chat_history:
-            st.markdown("**Questions suggérées :**")
+            st.markdown("**Exemples de questions :**")
             suggestions = [
                 "Quel est le sujet principal de ce document ?",
                 "Quelles sont les conclusions ou recommandations ?",
@@ -728,7 +728,7 @@ def main():
                 use_container_width=True,
                 key="generate_missing_summaries",
             ):
-                progress = st.progress(0, text="Préparation des résumés...")
+                progress = st.progress(0, text="Préparation des résumés…")
                 for index, doc in enumerate(missing_summaries):
                     fname = doc['filename']
                     try:
@@ -752,7 +752,7 @@ def main():
                 "Regénérer ce résumé",
                 key=f"sum_{fname}",
             ):
-                with st.spinner(f"Analyse de {fname}..."):
+                with st.spinner(f"Analyse de {fname}…"):
                     try:
                         summary = pipeline.summarize(
                             text=indexed_document_text(pipeline.vectorstore, fname),
@@ -808,11 +808,11 @@ def main():
         else:
             compare_q = st.text_input(
                 "Question de comparaison",
-                placeholder="Ex: Quelles sont les conclusions sur les performances ?",
+                placeholder="Ex. : quelles sont les conclusions sur les performances ?",
                 help="Les réponses seront générées séparément pour chaque document."
             )
             if st.button("Comparer", type="primary") and compare_q:
-                with st.spinner("Comparaison en cours..."):
+                with st.spinner("Comparaison en cours…"):
                     try:
                         results = pipeline.compare_documents(compare_q)
                         st.markdown(f"**Question :** {compare_q}")
@@ -827,19 +827,19 @@ def main():
 
     # ── TAB 4 : MÉTRIQUES ─────────────────────────────────────────────────────
     with tab4:
-        st.markdown('<div class="section-header">Métriques & Analyse</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">Indicateurs et activité</div>', unsafe_allow_html=True)
 
         # KPIs
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Documents", pipeline.n_documents)
         with col2:
-            st.metric("Chunks total", pipeline.total_chunks)
+            st.metric("Segments indexés", pipeline.total_chunks)
         with col3:
             st.metric("Requêtes", st.session_state.total_queries)
         with col4:
             avg_lat = (st.session_state.total_latency / max(st.session_state.total_queries, 1))
-            st.metric("Latence moy.", f"{avg_lat:.2f}s")
+            st.metric("Latence moyenne", f"{avg_lat:.2f} s")
 
         st.divider()
 
@@ -859,40 +859,40 @@ def main():
         st.divider()
 
         # ── Section Évaluation SOTA RAGAS ──────────────────────────────────────────
-        st.markdown('<div class="section-header">Évaluation SOTA RAGAS & Benchmark de Retrieval</div>', unsafe_allow_html=True)
-        st.caption("Mesure objective des 4 piliers RAGAS (Es et al., 2023) comparant la recherche dense, lexicale et hybride avec Reciprocal Rank Fusion.")
+        st.markdown('<div class="section-header">Évaluation RAGAS et comparaison des méthodes de recherche</div>', unsafe_allow_html=True)
+        st.caption("Comparaison des quatre critères RAGAS (Es et al., 2023) pour les méthodes de recherche vectorielle, lexicale et hybride avec fusion réciproque des rangs (RRF).")
 
         col_radar, col_bench = st.columns([1, 1])
         with col_radar:
-            st.markdown("##### Profil de Qualité RAGAS (Radar Chart)")
+            st.markdown("##### Profil de qualité RAGAS")
             st.plotly_chart(plot_ragas_radar(), use_container_width=True)
 
         with col_bench:
-            st.markdown("##### Benchmark Comparatif des Moteurs de Retrieval")
+            st.markdown("##### Comparaison des méthodes de recherche")
             df_ragas = pd.DataFrame({
                 "Stratégie de Recherche": [
-                    "Dense FAISS seul",
-                    "BM25 Okapi seul",
-                    "Hybrid Search (Dense + BM25 RRF)"
+                    "Recherche vectorielle FAISS seule",
+                    "Recherche lexicale BM25 seule",
+                    "Recherche hybride (vectorielle + BM25/RRF)"
                 ],
-                "Context Precision": ["82.4%", "79.5%", "95.1%"],
-                "Context Recall": ["78.1%", "71.3%", "91.5%"],
-                "Faithfulness": ["84.2%", "81.0%", "94.2%"],
-                "Latence moy.": ["0.35s", "0.05s", "0.38s"]
+                "Précision du contexte": ["82.4%", "79.5%", "95.1%"],
+                "Rappel du contexte": ["78.1%", "71.3%", "91.5%"],
+                "Fidélité": ["84.2%", "81.0%", "94.2%"],
+                "Latence moyenne": ["0,35 s", "0,05 s", "0,38 s"]
             })
             st.dataframe(df_ragas, use_container_width=True, hide_index=True)
-            st.info("Gain de performance : la fusion RRF hybride élimine les faux positifs lexicaux et capture le contexte sémantique profond (+18% de rappel global).")
+            st.info("Gain de performance : la fusion hybride RRF réduit les faux positifs lexicaux et retrouve mieux le contexte sémantique (+18 % de rappel global).")
 
         # Détails des documents
         if st.session_state.ingested_files:
             st.markdown("#### Détails des documents")
             df = pd.DataFrame(st.session_state.ingested_files)
-            df.columns = ['Fichier', 'Pages', 'Chunks', 'Chunk moy. (chars)', 'Total chars']
+            df.columns = ['Fichier', 'Pages', 'Segments', 'Taille moyenne (caractères)', 'Total (caractères)']
             st.dataframe(df, use_container_width=True)
 
         # Export de l'historique
         if st.session_state.chat_history:
-            st.markdown("#### Export")
+            st.markdown("#### Exporter l’historique")
             history_json = json.dumps(st.session_state.chat_history, ensure_ascii=False, indent=2)
             st.download_button(
                 "Télécharger l'historique (JSON)",
